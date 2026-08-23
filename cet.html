@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="大学英语四六级非官方区间估分工具，不收集姓名、证件号或准考证号。">
+  <title>四六级区间估分｜学生雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">学生雷达 <span>Beta</span></a>
+    <div class="top-actions">
+      <a class="top-link" href="index.html">竞赛</a>
+      <a class="top-link" href="papers.html">论文</a>
+      <a class="top-link is-active" href="cet.html">四六级</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero cet-hero">
+      <p class="eyebrow">CET SCORE RANGE</p>
+      <h1>不猜一个准数<br><em>只给合理区间</em></h1>
+      <p>根据你记得的客观题正确数和主观题自评估算。全程在浏览器本地计算，不需要姓名、学校、准考证号或身份证。</p>
+      <div class="privacy-pill">本地计算 · 不上传答题数据 · 非官方成绩</div>
+    </section>
+
+    <div class="estimator-layout">
+      <form id="cet-form" class="estimator-card">
+        <div class="section-head compact-head">
+          <div><p class="eyebrow">YOUR INPUT</p><h2>填写答题情况</h2></div>
+        </div>
+
+        <label class="field-label" for="cet-level">考试级别</label>
+        <select id="cet-level" required>
+          <option value="CET-4">英语四级 CET-4</option>
+          <option value="CET-6">英语六级 CET-6</option>
+        </select>
+
+        <div class="number-grid">
+          <label>
+            <span>听力预计答对</span>
+            <span class="number-input"><input id="listening-correct" type="number" min="0" max="25" inputmode="numeric" placeholder="如 17" required><b>/ 25</b></span>
+          </label>
+          <label>
+            <span>阅读预计答对</span>
+            <span class="number-input"><input id="reading-correct" type="number" min="0" max="30" inputmode="numeric" placeholder="如 21" required><b>/ 30</b></span>
+          </label>
+        </div>
+
+        <label class="field-label" for="writing-level">写作自评</label>
+        <select id="writing-level" required>
+          <option value="" selected disabled>选择最接近的情况</option>
+          <option value="1">1档｜基本空白、严重跑题或难以理解</option>
+          <option value="2">2档｜内容不完整，错误较多</option>
+          <option value="3">3档｜基本完成，意思大体清楚</option>
+          <option value="4">4档｜内容完整，结构清楚，错误较少</option>
+          <option value="5">5档｜表达流畅，论证充分，错误很少</option>
+        </select>
+
+        <label class="field-label" for="translation-level">翻译自评</label>
+        <select id="translation-level" required>
+          <option value="" selected disabled>选择最接近的情况</option>
+          <option value="1">1档｜大部分未译或基本无法理解</option>
+          <option value="2">2档｜信息缺失较多，错误较多</option>
+          <option value="3">3档｜主要信息基本表达出来</option>
+          <option value="4">4档｜信息完整，语言较通顺</option>
+          <option value="5">5档｜准确连贯，错误很少</option>
+        </select>
+
+        <button class="estimate-button" type="submit">免费计算估分区间</button>
+        <p class="form-note">不要输入真实姓名、准考证号、身份证号或完整答题内容。</p>
+      </form>
+
+      <section id="cet-result" class="result-card" aria-live="polite">
+        <p class="eyebrow">ESTIMATED RANGE</p>
+        <div id="result-placeholder" class="result-placeholder">
+          <strong>等待填写</strong>
+          <span>提交后在这里显示估分区间与各部分估算。</span>
+        </div>
+        <div id="result-content" hidden>
+          <span id="result-level" class="badge badge-category"></span>
+          <h2 id="result-range"></h2>
+          <p id="result-center" class="result-center"></p>
+          <div class="score-breakdown">
+            <div><span>听力参考</span><strong id="score-listening"></strong></div>
+            <div><span>阅读参考</span><strong id="score-reading"></strong></div>
+            <div><span>写作参考</span><strong id="score-writing"></strong></div>
+            <div><span>翻译参考</span><strong id="score-translation"></strong></div>
+          </div>
+          <div class="warning cet-warning">这不是官方成绩，也不存在公开算法可以精确复现当次常模转换。区间用于考后复盘，不用于成绩证明或重要决定。</div>
+          <button id="share-estimate" class="share-estimate" type="button">复制不含答题数据的结果</button>
+          <small id="share-status" class="copy-status"></small>
+          <a class="demand-link" href="mailto:792629666@qq.com?subject=CET%E4%BC%B0%E5%88%862%E5%85%83%E8%AF%A6%E7%BB%86%E8%AF%8A%E6%96%AD%E5%86%85%E6%B5%8B&body=%E6%88%91%E6%84%BF%E6%84%8F%E5%8F%82%E4%B8%8E2%E5%85%83%E8%AF%A6%E7%BB%86%E8%AF%8A%E6%96%AD%E7%9A%84%E5%86%85%E6%B5%8B%EF%BC%8C%E6%88%91%E6%9C%80%E5%85%B3%E5%BF%83%E7%9A%84%E6%98%AF%EF%BC%9A">如果“估分 + 详细诊断”收费 2 元，我愿意内测 →</a>
+        </div>
+      </section>
+    </div>
+
+    <section class="sources cet-policy">
+      <div><p class="eyebrow">HOW IT WORKS</p><h2>为什么只能估区间</h2></div>
+      <ul>
+        <li>CET 报道总分为 710 分，听力占 35%、阅读占 35%、写作和翻译合计占 30%。</li>
+        <li>官方采用常模参照与试卷等值转换，不是简单地按答对题数乘固定分值。</li>
+        <li>本站用线性比例形成中心参考，再加入客观题回忆误差和主观题自评误差。</li>
+        <li>估分不会被保存；刷新页面后输入与结果消失。</li>
+      </ul>
+      <a href="https://cet.neea.edu.cn/html1/folder/19081/5124-1.htm" target="_blank" rel="noopener noreferrer">查看中国教育考试网分数解释 →</a>
+    </section>
+  </main>
+
+  <footer>
+    <span>林小八制作 · 非教育考试院官方工具</span>
+    <span><a href="index.html">竞赛</a> · <a href="papers.html">论文</a> · <a href="mailto:792629666@qq.com">反馈</a></span>
+  </footer>
+  <script src="cet.js"></script>
+</body>
+</html>
