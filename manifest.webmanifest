@@ -1,7 +1,7 @@
 {
-  "name": "福大竞赛雷达",
-  "short_name": "竞赛雷达",
-  "description": "汇总公开竞赛通知、关键时间节点与官方来源。",
+  "name": "学生雷达",
+  "short_name": "学生雷达",
+  "description": "竞赛时间、最新论文与四六级区间估分的学生信息工具。",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -16,4 +16,3 @@
     }
   ]
 }
-
