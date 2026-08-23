@@ -35,6 +35,8 @@ for (const event of events) {
     previous = timestamp;
   }
 }
+const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
+assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
 
 assert(Array.isArray(papers) && papers.length > 0 && papers.length <= 30, "Paper data must contain 1–30 items");
 assert(new Set(papers.map((item) => item.id)).size === papers.length, "Paper IDs must be unique");
@@ -69,4 +71,5 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, papers: papers.length, pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+
