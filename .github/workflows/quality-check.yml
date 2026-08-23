@@ -1,0 +1,19 @@
+name: Validate public data and site
+
+on:
+  push:
+  schedule:
+    - cron: "25 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Validate data, links and public files
+        run: node scripts/validate_site.mjs
