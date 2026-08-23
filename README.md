@@ -1,10 +1,12 @@
 # 福大竞赛雷达
 
-面向大学生的信息雷达验证版。当前包含竞赛雷达与论文雷达：竞赛页支持筛选、收藏和 `.ics` 日历导出；论文页每天自动更新数字媒体相关领域的最新公开元数据。
+面向大学生的信息雷达验证版。当前包含竞赛雷达、论文雷达和四六级助手：竞赛页支持筛选、收藏和 `.ics` 日历导出；论文页每天自动更新数字媒体相关领域的最新公开元数据；四六级页在本地计算非官方估分区间。
 
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
+
+四六级区间估分：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/cet.html
 
 ## 本地预览
 
@@ -21,5 +23,6 @@
 - 不代理官方报名
 - 不收集账号、学号或参赛作品
 - 不自动生成参赛作品
+- 不保存四六级答题情况或身份信息
+- 不把估分宣传为官方成绩
 - 不是福州大学或赛事主办方的官方平台
-
