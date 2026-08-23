@@ -2,6 +2,8 @@
 
 面向福州大学学生的竞赛时间信息验证版。第一版为响应式 Web/PWA：无需注册，可筛选、收藏，并把关键节点导出为 `.ics` 日历文件。
 
+在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
+
 ## 本地预览
 
 直接打开 `index.html` 可以使用主要功能。要测试安装和离线访问，请在此目录启动任意静态文件服务器，通过 `http://localhost` 访问。
