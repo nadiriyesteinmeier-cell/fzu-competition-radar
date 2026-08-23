@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="福大竞赛雷达：汇总公开竞赛通知、关键时间节点与官方来源。">
+  <title>福大竞赛雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">福大竞赛雷达 <span>Beta</span></a>
+    <button id="install-button" class="install-button" type="button" hidden>安装到手机</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">FZU COMPETITION RADAR</p>
+      <h1>别再错过<br><em>报名与交稿时间</em></h1>
+      <p>只整理公开通知，保留原文链接与核验时间。平台不是赛事官方，最终安排以主办方和福州大学最新通知为准。</p>
+      <div class="stats" aria-label="数据概览">
+        <div><strong id="verified-count">0</strong><span>已核验赛事</span></div>
+        <div><strong id="upcoming-count">0</strong><span>30天内节点</span></div>
+        <div><strong id="latest-date">—</strong><span>最近核验</span></div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="筛选竞赛">
+      <label class="search">
+        <span class="sr-only">搜索竞赛</span>
+        <input id="search-input" type="search" placeholder="搜索竞赛、专业或主办方">
+      </label>
+      <div id="category-filters" class="chips" aria-label="竞赛类别"></div>
+      <div class="control-row">
+        <label><input id="soon-only" type="checkbox"> 只看30天内有节点</label>
+        <label><input id="favorites-only" type="checkbox"> 只看收藏</label>
+      </div>
+    </section>
+
+    <section class="list-section">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">OPEN & UPCOMING</p>
+          <h2>竞赛时间线</h2>
+        </div>
+        <span id="result-count" class="result-count"></span>
+      </div>
+      <div id="event-list" class="event-list"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <h3>没有匹配的竞赛</h3>
+        <p>清除筛选条件，或等待下一次官方通知更新。</p>
+      </div>
+    </section>
+
+    <section class="sources">
+      <div>
+        <p class="eyebrow">SOURCE POLICY</p>
+        <h2>每个日期都应能回到原文</h2>
+      </div>
+      <ul>
+        <li>优先采用福州大学、政府部门、赛事组委会或主办学会官网。</li>
+        <li>全国截止不等于福大校内截止；校内时间未知时必须明确提示。</li>
+        <li>自动采集只生成待审核记录，公开前需要人工核对。</li>
+        <li>不保存学号、身份证、报名表或参赛作品。</li>
+      </ul>
+      <a href="sources.html">查看数据来源与收录规则 →</a>
+    </section>
+  </main>
+
+  <footer>
+    <span>林小八制作 · 非福州大学或赛事官方平台</span>
+    <a href="mailto:792629666@qq.com">反馈错误</a>
+  </footer>
+
+  <template id="event-template">
+    <article class="event-card">
+      <div class="card-top">
+        <div class="badges"></div>
+        <button class="favorite-button" type="button" aria-label="收藏竞赛">☆</button>
+      </div>
+      <h3></h3>
+      <p class="summary"></p>
+      <div class="meta"></div>
+      <div class="deadline-callout"></div>
+      <ol class="timeline"></ol>
+      <div class="warning" hidden></div>
+      <div class="card-actions">
+        <a class="source-link" target="_blank" rel="noopener noreferrer">查看官方原文</a>
+        <button class="calendar-button" type="button">加入日历</button>
+      </div>
+      <small class="verified-at"></small>
+    </article>
+  </template>
+
+  <script src="data/events.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
