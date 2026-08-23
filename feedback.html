@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="用两分钟匿名反馈学生雷达的竞赛、论文与四六级功能。">
+  <link rel="canonical" href="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/feedback.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="2分钟反馈｜学生雷达">
+  <meta property="og:description" content="匿名告诉林小八：哪里真有用，哪里只是看起来有用。">
+  <meta property="og:url" content="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/feedback.html">
+  <meta property="og:image" content="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/share-card.png">
+  <title>2分钟反馈｜学生雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">学生雷达 <span>Beta</span></a>
+    <div class="top-actions"><a class="top-link" href="index.html">返回首页</a></div>
+  </header>
+
+  <main>
+    <section class="hero feedback-hero">
+      <p class="eyebrow">TWO-MINUTE FEEDBACK</p>
+      <h1>哪里真有用<br><em>哪里只是看起来有用</em></h1>
+      <p>不需要姓名、学号或联系方式。提交不会自动上传，只会在你的设备上生成一段文字，由你决定是否复制或发送。</p>
+      <div class="privacy-pill">匿名填写 · 不自动上传 · 不写入本地存储</div>
+    </section>
+
+    <div class="feedback-layout">
+      <form id="feedback-form" class="estimator-card">
+        <div class="section-head compact-head">
+          <div><p class="eyebrow">YOUR EXPERIENCE</p><h2>告诉我们真实体验</h2></div>
+          <span class="result-count">约 2 分钟</span>
+        </div>
+
+        <fieldset>
+          <legend>1. 你主要试用了哪个功能？</legend>
+          <label><input type="radio" name="module" value="竞赛雷达" required> 竞赛雷达</label>
+          <label><input type="radio" name="module" value="论文雷达"> 论文雷达</label>
+          <label><input type="radio" name="module" value="四六级估分"> 四六级估分</label>
+        </fieldset>
+
+        <label class="field-label" for="completed-action">2. 你实际完成了什么？</label>
+        <select id="completed-action" name="action" required>
+          <option value="" selected disabled>请选择最接近的一项</option>
+          <option>找到了竞赛信息</option>
+          <option>把竞赛节点加入日历</option>
+          <option>打开并阅读了论文原文</option>
+          <option>完成了四六级估分</option>
+          <option>浏览了，但没有完成以上动作</option>
+        </select>
+
+        <fieldset>
+          <legend>3. 这个工具对你有用吗？</legend>
+          <label><input type="radio" name="useful" value="很有用" required> 很有用</label>
+          <label><input type="radio" name="useful" value="有一点用"> 有一点用</label>
+          <label><input type="radio" name="useful" value="暂时没用"> 暂时没用</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>4. 你愿意再次使用吗？</legend>
+          <label><input type="radio" name="return" value="会" required> 会</label>
+          <label><input type="radio" name="return" value="不确定"> 不确定</label>
+          <label><input type="radio" name="return" value="不会"> 不会</label>
+        </fieldset>
+
+        <label class="field-label" for="willingness">5. 哪个付费选项最接近你的真实想法？</label>
+        <select id="willingness" name="willingness" required>
+          <option value="" selected disabled>请选择，不会产生付款</option>
+          <option>目前只会使用免费功能</option>
+          <option>愿为一次详细诊断付 2 元</option>
+          <option>愿为一学期提醒服务付 6.9 元</option>
+          <option>社团愿为专属竞赛日历付 99 元以上</option>
+        </select>
+
+        <label class="field-label" for="feedback-comment">6. 最想改进的一点（选填）</label>
+        <textarea id="feedback-comment" name="comment" maxlength="300" rows="5" placeholder="例如：竞赛太少、提醒方式不方便、估分说明不清楚……"></textarea>
+        <div class="character-count"><span id="comment-count">0</span>/300</div>
+
+        <button class="estimate-button" type="submit">生成匿名反馈</button>
+        <p class="form-note">生成后仍留在当前页面，只有你点击“复制”或“打开邮件”才会离开设备。</p>
+      </form>
+
+      <section id="feedback-result" class="result-card feedback-result" aria-live="polite">
+        <p class="eyebrow">READY TO SEND</p>
+        <div id="feedback-placeholder" class="result-placeholder">
+          <strong>等待填写</strong>
+          <span>完成 5 个选择题，就能生成不含身份信息的反馈。</span>
+        </div>
+        <div id="feedback-content" hidden>
+          <h2>谢谢你直说</h2>
+          <p class="result-center">请先检查内容，再选择复制或打开邮件。页面不会自动发送。</p>
+          <pre id="feedback-text" class="feedback-text"></pre>
+          <button id="copy-feedback" class="share-estimate" type="button">复制反馈</button>
+          <a id="email-feedback" class="feedback-mail" href="#">打开邮件发送给林小八</a>
+          <small id="feedback-status" class="copy-status"></small>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <span>林小八制作 · 匿名反馈不会自动上传</span>
+    <span><a href="index.html">竞赛</a> · <a href="papers.html">论文</a> · <a href="cet.html">四六级</a> · <a href="privacy.html">隐私</a></span>
+  </footer>
+  <script src="feedback.js"></script>
+</body>
+</html>

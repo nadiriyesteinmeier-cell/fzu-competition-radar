@@ -51,7 +51,7 @@ const updated = Date.parse(`${paperWindow.PAPER_DATA_UPDATED_AT}T00:00:00Z`);
 assert(Number.isFinite(updated), "Paper update date is invalid");
 assert(Date.now() - updated < 8 * 24 * 60 * 60 * 1000, "Paper data has not refreshed for more than 7 days");
 
-const pages = ["index.html", "papers.html", "cet.html", "privacy.html", "sources.html", "404.html"];
+const pages = ["index.html", "papers.html", "cet.html", "feedback.html", "privacy.html", "sources.html", "404.html"];
 for (const page of pages) {
   const html = fs.readFileSync(path.join(root, page), "utf8");
   assert((html.match(/<h1[\s>]/g) || []).length === 1, `${page}: expected exactly one h1`);
@@ -72,4 +72,3 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
 console.log(JSON.stringify({ competitions: events.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
-
