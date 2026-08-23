@@ -1,5 +1,5 @@
-const CACHE = "student-radar-v3";
-const APP_SHELL = ["./", "./index.html", "./papers.html", "./cet.html", "./styles.css", "./app.js", "./papers.js", "./cet.js", "./data/events.js", "./data/papers.js", "./sources.html", "./icon.svg", "./manifest.webmanifest"];
+const CACHE = "student-radar-v4";
+const APP_SHELL = ["./", "./index.html", "./papers.html", "./cet.html", "./privacy.html", "./404.html", "./styles.css", "./app.js", "./papers.js", "./cet.js", "./data/events.js", "./data/papers.js", "./sources.html", "./icon.svg", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
