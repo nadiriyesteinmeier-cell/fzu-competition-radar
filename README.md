@@ -8,6 +8,8 @@
 
 四六级区间估分：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/cet.html
 
+2 分钟匿名反馈：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/feedback.html
+
 ## 本地预览
 
 直接打开 `index.html` 可以使用主要功能。要测试安装和离线访问，请在此目录启动任意静态文件服务器，通过 `http://localhost` 访问。
@@ -25,4 +27,5 @@
 - 不自动生成参赛作品
 - 不保存四六级答题情况或身份信息
 - 不把估分宣传为官方成绩
+- 反馈不会自动上传或写入本地存储
 - 不是福州大学或赛事主办方的官方平台
