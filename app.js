@@ -9,6 +9,7 @@
     category: "全部",
     query: "",
     soonOnly: false,
+    recognizedOnly: false,
     favoritesOnly: false,
     favorites: loadFavorites()
   };
@@ -21,6 +22,7 @@
     categories: document.querySelector("#category-filters"),
     search: document.querySelector("#search-input"),
     soonOnly: document.querySelector("#soon-only"),
+    recognizedOnly: document.querySelector("#recognized-only"),
     favoritesOnly: document.querySelector("#favorites-only"),
     verifiedCount: document.querySelector("#verified-count"),
     upcomingCount: document.querySelector("#upcoming-count"),
@@ -105,6 +107,7 @@
       return (state.category === "全部" || event.category === state.category)
         && (!query || haystack.includes(query))
         && (!state.soonOnly || hasMilestoneSoon(event))
+        && (!state.recognizedOnly || Boolean(event.recognition))
         && (!state.favoritesOnly || state.favorites.has(event.id));
     }).sort((a, b) => {
       const aNext = futureMilestones(a)[0];
@@ -126,6 +129,14 @@
     addText(badges, "badge badge-category", event.category);
     addText(badges, "badge", event.level);
     addText(badges, "badge badge-verified", verificationLabel(event.verification));
+    if (event.recognition) {
+      const recognitionText = event.recognition.status === "direct"
+        ? `福大直接认定 · ${event.recognition.level}`
+        : `福大目录赛事 · ${event.recognition.level}`;
+      addText(badges, "badge badge-recognized", recognitionText);
+    } else {
+      addText(badges, "badge badge-unmatched", "福大2026表未匹配");
+    }
 
     card.querySelector("h3").textContent = event.title;
     card.querySelector(".summary").textContent = event.summary;
@@ -240,6 +251,7 @@
 
   elements.search.addEventListener("input", (event) => { state.query = event.target.value; render(); });
   elements.soonOnly.addEventListener("change", (event) => { state.soonOnly = event.target.checked; render(); });
+  elements.recognizedOnly.addEventListener("change", (event) => { state.recognizedOnly = event.target.checked; render(); });
   elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; render(); });
 
   let installPrompt;

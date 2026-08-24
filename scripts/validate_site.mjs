@@ -34,7 +34,14 @@ for (const event of events) {
     assert(timestamp >= previous, `${event.id}: milestones must be chronological`);
     previous = timestamp;
   }
+  if (event.recognition) {
+    assert(["direct", "series"].includes(event.recognition.status), `${event.id}: invalid recognition status`);
+    assert(event.recognition.level && event.recognition.officialName && event.recognition.source, `${event.id}: incomplete recognition metadata`);
+  }
 }
+const recognized = events.filter((event) => event.recognition);
+assert(recognized.length === 3, "Expected three current events matched to the FZU 2026 recognition lists");
+assert(recognized.filter((event) => event.recognition.status === "direct").length === 2, "Expected two exact direct-recognition matches");
 const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
 assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
 
@@ -71,4 +78,4 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));

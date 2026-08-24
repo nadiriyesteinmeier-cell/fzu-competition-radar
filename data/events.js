@@ -32,6 +32,12 @@ window.COMPETITION_EVENTS = [
     sourceLabel: "全国组委会2026通知",
     verifiedAt: "2026-08-23",
     verification: "organizer-official",
+    recognition: {
+      status: "direct",
+      level: "国家级",
+      officialName: "全国大学生数学建模竞赛",
+      source: "福州大学附件1：直接认定一览表（2026年版）"
+    },
     warning: "9月7日是全国组委会报名截止，不代表福大校内截止。学校通常需要提前审核，请先向学院或校内组织教师确认是否仍可报名。",
     milestones: [
       { label: "全国组委会报名截止", at: "2026-09-07T20:00:00+08:00", kind: "registration" },
@@ -53,6 +59,12 @@ window.COMPETITION_EVENTS = [
     sourceLabel: "教育部赛事通知",
     verifiedAt: "2026-08-23",
     verification: "government-official",
+    recognition: {
+      status: "direct",
+      level: "国家级",
+      officialName: "中国国际大学生创新大赛",
+      source: "福州大学附件1：直接认定一览表（2026年版）"
+    },
     warning: "教育部系统报名不等于通过福州大学遴选。参赛前必须确认学院、学校和福建赛区的内部安排。",
     milestones: [
       { label: "全国报名系统开放", at: "2026-08-10T00:00:00+08:00", kind: "registration" },
@@ -92,7 +104,13 @@ window.COMPETITION_EVENTS = [
     sourceLabel: "未来设计师赛项页",
     verifiedAt: "2026-08-24",
     verification: "organizer-official",
-    warning: "作品要求AIGC为主要创作手段且使用占比不低于60%，还需使用官方素材包；投稿前应逐条核对素材、商标和版权要求。",
+    recognition: {
+      status: "series",
+      level: "国家级",
+      officialName: "未来设计师·全国高校数字艺术设计大赛",
+      source: "福州大学附件1：直接认定一览表（2026年版）"
+    },
+    warning: "该专项赛属于福大直接认定目录中的“未来设计师·全国高校数字艺术设计大赛”体系，但具体赛项和奖项能否认定仍以学校最终审核为准。作品要求AIGC使用占比不低于60%，还需核对素材、商标和版权要求。",
     milestones: [
       { label: "作品投稿截止（官网未写具体时刻）", at: "2026-10-01T00:00:00+08:00", kind: "submission" },
       { label: "获奖名单公布", at: "2026-10-30T00:00:00+08:00", kind: "result" }
