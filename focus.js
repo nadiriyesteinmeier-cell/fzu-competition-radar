@@ -109,4 +109,3 @@
   $("#reset-progress").addEventListener("click", () => { localStorage.removeItem(progressKey); renderTasks(); });
   $("#wechat-waitlist").href = `mailto:792629666@qq.com?subject=${encodeURIComponent(`${event.title}提醒内测`)}`;
 })();
-

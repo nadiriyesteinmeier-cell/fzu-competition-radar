@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="学生雷达论文AI精读原型：论文简析、总结、翻译与创新点提取。">
+  <link rel="canonical" href="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/paper-analysis.html">
+  <title>论文 AI 精读｜学生雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">学生雷达 <span>Beta</span></a>
+    <div class="top-actions">
+      <a class="top-link" href="index.html">竞赛</a><a class="top-link is-active" href="papers.html">论文</a><a class="top-link" href="cet.html">四六级</a><a class="top-link" href="pro.html">Pro</a><a class="top-link" href="profile.html">我的</a>
+    </div>
+  </header>
+  <main>
+    <section class="analysis-hero">
+      <div><p class="eyebrow">PAPER READING LAB · PROTOTYPE</p><h1>先看样章<br><em>再决定是否精读</em></h1><p>选择服务后可模拟解锁，不扣费、不上传数据。当前结果只演示产品流程，真实AI与微信支付尚未接入。</p></div>
+      <a href="papers.html">← 返回论文索引</a>
+    </section>
+    <section class="analysis-paper-card" aria-labelledby="analysis-paper-title">
+      <div class="badges"><span class="badge badge-category" id="analysis-category">论文</span><span class="badge badge-verified">arXiv 元数据</span></div>
+      <h2 id="analysis-paper-title">正在读取论文……</h2><p id="analysis-authors"></p>
+      <div class="analysis-paper-actions"><a id="analysis-source" target="_blank" rel="noopener noreferrer">打开原文</a><a href="papers.html">换一篇论文</a></div>
+    </section>
+    <div class="analysis-layout">
+      <section class="analysis-products" aria-labelledby="analysis-products-title">
+        <div class="section-head"><div><p class="eyebrow">CHOOSE A SERVICE</p><h2 id="analysis-products-title">选择精读方式</h2></div><span>内测价格</span></div>
+        <div id="analysis-product-list" class="analysis-product-list"></div>
+        <article class="analysis-sample">
+          <div><span>免费样章</span><strong>先看结构，不为黑盒结果付费</strong></div>
+          <dl><div><dt>研究问题</dt><dd id="sample-question"></dd></div><div><dt>方法线索</dt><dd id="sample-method"></dd></div><div><dt>结果线索</dt><dd id="sample-result"></dd></div></dl>
+          <p>以上仅从作者摘要定位英文原句，不等于平台已经核验全文。</p>
+        </article>
+      </section>
+      <aside class="analysis-checkout">
+        <p class="eyebrow">SIMULATED CHECKOUT</p><h2 id="checkout-name">快速简析</h2><p id="checkout-description"></p>
+        <div class="checkout-price"><strong id="checkout-price">¥1.9</strong><span>一次性解锁 · 当前仅模拟</span></div>
+        <ul id="checkout-features"></ul><button id="mock-unlock" type="button">模拟解锁 · 不扣费</button><small>现在不需要登录，也不会发起微信支付。</small>
+      </aside>
+    </div>
+    <section id="analysis-result" class="analysis-result" hidden>
+      <div class="section-head"><div><p class="eyebrow">YOUR READING NOTE</p><h2>已生成演示阅读卡</h2></div><button id="copy-analysis" type="button">复制 Markdown</button></div>
+      <div class="result-notice">演示结果基于作者摘要自动定位，仅用于验证页面体验。接入AI后才会生成中文翻译、全文分析和可靠的创新性对比。</div>
+      <div id="analysis-result-grid" class="analysis-result-grid"></div><small id="analysis-copy-status" aria-live="polite"></small>
+    </section>
+    <section id="my-reading" class="reading-library">
+      <div class="section-head"><div><p class="eyebrow">MY READING</p><h2>我的精读</h2></div><span id="reading-count">0 条本机记录</span></div>
+      <div id="reading-list" class="reading-list"></div><div id="reading-empty" class="empty-state"><h3>还没有精读记录</h3><p>从任意论文选择一种服务并模拟解锁。</p></div>
+    </section>
+  </main>
+  <footer><span>林小八制作 · 付费功能交互原型</span><span><a href="papers.html">论文索引</a> · <a href="privacy.html">隐私</a></span></footer>
+  <script src="data/papers.js"></script><script src="paper-analysis.js"></script>
+</body>
+</html>

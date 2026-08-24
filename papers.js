@@ -128,6 +128,8 @@
     card.querySelector(".paper-abstract").textContent = paper.abstract;
     const source = card.querySelector(".paper-source");
     source.href = paper.url;
+    const proLink = card.querySelector(".paper-pro-link");
+    proLink.href = `paper-analysis.html?id=${encodeURIComponent(paper.id)}`;
 
     const favorite = card.querySelector(".favorite-button");
     const updateFavorite = () => {

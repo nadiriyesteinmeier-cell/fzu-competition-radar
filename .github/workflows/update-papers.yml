@@ -35,4 +35,3 @@ jobs:
           git add data/papers.js
           git commit -m "Update latest paper metadata"
           git push
-

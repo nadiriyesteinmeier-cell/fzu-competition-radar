@@ -171,4 +171,3 @@
   const defaultBrief = briefs.find((item) => item.id === requested) || [...briefs].sort((a, b) => fitScore(b) - fitScore(a))[0];
   if (defaultBrief) renderBrief(defaultBrief);
 })();
-

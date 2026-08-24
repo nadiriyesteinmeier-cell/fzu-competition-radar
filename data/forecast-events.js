@@ -76,4 +76,3 @@ window.LONG_RANGE_WATCH = {
   sourceUrl: "https://www.contest.comap.com/undergraduate/contests/mcm/instructions.php",
   sourceLabel: "COMAP 2027官方规则与日期"
 };
-
