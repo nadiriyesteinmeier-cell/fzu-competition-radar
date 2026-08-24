@@ -18,7 +18,7 @@ async function waitForServer() {
 }
 
 try {
-  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock", "Unexpected test modes");
+  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock" && health.volumeAttached === false && health.revision === "local", "Unexpected test modes");
   const productResult = await request("/api/products"); assert(productResult.value.products.length === 4, "Expected four products");
   const invalid = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); assert(invalid.response.status === 400, "Invalid order guard failed");
   const clientId = crypto.randomUUID();
