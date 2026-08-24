@@ -42,7 +42,13 @@
         <div class="analysis-runtime"><span id="ai-runtime-status">演示模式</span></div>
         <p class="eyebrow">READING CHECKOUT</p><h2 id="checkout-name">快速简析</h2><p id="checkout-description"></p>
         <div class="checkout-price"><strong id="checkout-price">¥1.9</strong><span>一次性解锁 · 支付仍为模拟</span></div>
-        <ul id="checkout-features"></ul><button id="mock-unlock" type="button">模拟解锁 · 不扣费</button><small id="checkout-status">正在检查本地AI服务……</small>
+        <ul id="checkout-features"></ul>
+        <ol class="checkout-steps" aria-label="订单进度">
+          <li data-order-step="order">创建订单</li>
+          <li data-order-step="payment">确认权益</li>
+          <li data-order-step="generation">生成精读</li>
+        </ol>
+        <button id="mock-unlock" type="button">模拟解锁 · 不扣费</button><small id="checkout-status" aria-live="polite">正在检查本地AI服务……</small>
       </aside>
     </div>
     <section id="analysis-result" class="analysis-result" hidden>

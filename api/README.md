@@ -13,7 +13,19 @@ npm start
 
 默认使用 `gpt-5-mini`，每天最多 20 个未命中缓存的请求，单篇摘要最多 12000 字符。相同论文、服务类型和摘要会直接复用本地缓存。
 
+## 订单状态机
+
+1. `GET /api/products` 获取服务端商品与价格。
+2. `POST /api/orders` 创建 `pending_payment` 订单。
+3. 本地开发调用 `POST /api/orders/:id/mock-pay`，以后由微信支付回调替代。
+4. 只有 `paid` 订单才能调用 `POST /api/orders/:id/generate`。
+5. 生成成功后订单变成 `completed`，重复请求直接返回原结果。
+
+运行 `npm test` 会在隔离的临时目录中验证商品、订单、未支付拦截、模拟支付、权益、生成幂等和订单归属。测试使用 `AI_MOCK_MODE=true`，不会调用模型或产生费用。
+
 当前只分析 arXiv 元数据中的作者摘要，不下载论文 PDF，不声称核验了全文。部署前仍需增加用户登录、数据库、支付回调、持久化限流和 HTTPS 域名。
 
 如果接口返回“AI账户尚未开通API计费”，需要在 OpenAI Platform 的 Billing Overview 中购买预付费额度。建议测试阶段关闭自动充值，并同时设置项目用量上限。
+
+`Dockerfile` 可用于部署到支持容器的服务；生产容器默认关闭模拟支付。完整上线门槛见 `DEPLOYMENT.md`，安全边界见 `SECURITY.md`。
 
