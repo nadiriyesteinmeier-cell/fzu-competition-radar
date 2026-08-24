@@ -4,7 +4,8 @@
   const papers = Array.isArray(window.PAPER_ITEMS) ? window.PAPER_ITEMS : [];
   const labels = { "cs.CV": "计算机视觉", "cs.AI": "人工智能", "cs.HC": "人机交互" };
   const favoriteKey = "student-radar-paper-favorites-v1";
-  const latestPaperDate = papers.length ? new Date(Math.max(...papers.map((paper) => Date.parse(paper.published)))) : new Date();
+  const newestPaper = papers.length ? papers.reduce((latest, paper) => Date.parse(paper.published) > Date.parse(latest.published) ? paper : latest) : null;
+  const latestPaperDate = newestPaper ? new Date(`${dateKey(newestPaper.published)}T00:00:00Z`) : new Date();
   const state = { category: "全部", query: "", favoritesOnly: false, date: "全部", monthOffset: 0, favorites: loadFavorites(), limit: 12 };
   const elements = {
     list: document.querySelector("#paper-list"),
@@ -35,10 +36,14 @@
   }
 
   function formatDate(value) {
-    return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
+    return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Shanghai" }).format(new Date(value));
   }
 
-  function dateKey(value) { return new Date(value).toISOString().slice(0, 10); }
+  function dateKey(value) {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value));
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  }
 
   function renderDateIndex() {
     const month = new Date(Date.UTC(latestPaperDate.getUTCFullYear(), latestPaperDate.getUTCMonth() + state.monthOffset, 1));
@@ -53,7 +58,7 @@
       const key = day.toISOString().slice(0, 10);
       const count = papers.filter((paper) => dateKey(paper.published) === key).length;
       const button = document.createElement("button");
-      button.type = "button"; button.className = "paper-day"; button.dataset.count = String(count);
+      button.type = "button"; button.className = "paper-day"; button.dataset.count = String(count); button.dataset.date = key;
       if (day.getUTCMonth() !== month.getUTCMonth()) button.classList.add("is-outside-month");
       button.innerHTML = `<b></b><span></span>`;
       button.querySelector("b").textContent = String(day.getUTCDate()); button.querySelector("span").textContent = `${count}篇`;
@@ -104,6 +109,7 @@
 
   function renderCard(paper) {
     const card = elements.template.content.firstElementChild.cloneNode(true);
+    card.dataset.date = dateKey(paper.published);
     const badges = card.querySelector(".badges");
     displayCategories(paper).forEach((category) => {
       const badge = document.createElement("span");

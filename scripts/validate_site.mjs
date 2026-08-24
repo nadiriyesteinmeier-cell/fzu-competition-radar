@@ -79,7 +79,7 @@ assert([focus.officialUrl, focus.rulesUrl, focus.formatUrl, focus.archiveUrl, ..
 const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
 assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
 
-assert(Array.isArray(papers) && papers.length > 0 && papers.length <= 30, "Paper data must contain 1–30 items");
+assert(Array.isArray(papers) && papers.length > 0 && papers.length <= 180, "Paper data must contain 1–180 items");
 assert(new Set(papers.map((item) => item.id)).size === papers.length, "Paper IDs must be unique");
 for (const paper of papers) {
   assert(/^\d{4}\.\d{4,5}$/.test(paper.id), `${paper.id}: unexpected arXiv identifier`);

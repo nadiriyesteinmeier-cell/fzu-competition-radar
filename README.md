@@ -24,7 +24,7 @@
 
 赛事正式日期位于 `data/events.js`，预测窗口和三个月外长期关注位于 `data/forecast-events.js`，福大认定目录位于 `data/recognitions.js`。正式记录必须包含当届公开原文、核验日期和明确节点；预测记录必须引用往届官方原文、标明依据年份并关闭日历导出。全国截止与校内截止不得混写。
 
-论文数据由 `scripts/update_papers.py` 获取，GitHub Actions 每天运行一次。只保存描述性元数据，不下载或重新托管论文 PDF。
+论文数据由 `scripts/update_papers.py` 获取，GitHub Actions 每天运行一次。采集器分段获取近期结果，与既有数据合并后按北京时间归档，每天最多保留 12 篇、最多保留近 30 天和 180 篇；只保存描述性元数据，不下载或重新托管论文 PDF。
 
 ## 当前边界
 
