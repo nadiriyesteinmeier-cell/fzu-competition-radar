@@ -32,8 +32,12 @@
   function demoParts() {
     return [["研究问题", findSentence(/challenge|problem|bottleneck|difficult|scarce|limited/i, 0)], ["方法线索", findSentence(/we (?:propose|introduce|develop|present)|our method|framework/i, 1)], ["结果线索", findSentence(/result|show|achiev|improv|outperform|reach/i, 2)], ["创新点候选", "需要与相关工作逐篇对比后才能确认。演示版只标记作者在摘要中主动强调的方法变化。"], ["局限与核验", findSentence(/however|limitation|fail|struggle|future work|not yet/i, sentences(paper?.abstract || "").length - 1)]];
   }
-  function apiParts(value) {
-    return [["一句话总结", value.summary], ["研究问题", value.research_question], ["方法路线", value.method], ["关键结果", value.key_results.join("；")], ["创新点候选", value.innovations.join("；")], ["局限与核验", value.limitations.join("；")], ["阅读价值", value.reading_value], ["中文阅读预览", value.translation_excerpt]];
+  function list(value) { return Array.isArray(value) && value.length ? value.join("；") : "摘要未披露"; }
+  function apiParts(value, productId) {
+    if (productId === "quick") return [["一句话总结", value.summary], ["研究问题", value.research_question], ["方法路线", value.method], ["关键结果", list(value.key_results)], ["阅读价值", value.reading_value], ["证据边界", value.evidence_notice]];
+    if (productId === "innovation") return [["内容概览", value.summary], ["创新点候选", list(value.innovations)], ["摘要内证据", list(value.evidence_checks)], ["必须核验的问题", list(value.comparison_questions)], ["证据边界", value.evidence_notice]];
+    if (productId === "translate") return [["内容概览", value.summary], ["作者摘要中文阅读版", value.translation || value.translation_excerpt], ["核心术语", list(value.glossary)], ["难句说明", list(value.hard_sentences)], ["翻译边界", value.evidence_notice]];
+    return [["一句话总结", value.summary], ["研究问题", value.research_question], ["方法路线", value.method], ["关键结果", list(value.key_results)], ["创新点候选", list(value.innovations)], ["局限与核验", list(value.limitations)], ["复现准备", list(value.reproduction_steps)], ["阅读价值", value.reading_value], ["证据边界", value.evidence_notice]];
   }
   function renderPaper() {
     if (!paper) { elements.title.textContent = "暂时没有可分析的论文"; elements.unlock.disabled = true; return; }
@@ -78,7 +82,11 @@
     elements.resultSection.hidden = false; if (scroll) elements.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function showDemo(scroll) { renderResult(demoParts(), "DEMO", scroll, "演示结果只定位作者摘要中的英文原句，没有调用AI，也不会产生API费用。"); }
-  function showApiResult(analysis, scroll, cached) { renderResult(apiParts(analysis), "AI", scroll, `${cached ? "已复用缓存，未产生新的模型请求。" : "已由AI生成。"} 结果只依据作者摘要，不代表平台核验了论文全文。`); }
+  function showApiResult(analysis, scroll, cached, productId) {
+    const selectedId = productId || currentProduct.id; const selected = products.find((item) => item.id === selectedId);
+    if (selected) currentProduct = selected;
+    renderResult(apiParts(analysis, selectedId), "AI", scroll, `${cached ? "已复用缓存，未产生新的模型请求。" : "已由AI生成。"} 你购买的是“${currentProduct.name}”，页面只展示该商品包含的交付物。`);
+  }
   function renderReading() {
     const orders = readOrders(); elements.readingCount.textContent = `${orders.length} 条本机记录`; elements.readingEmpty.hidden = orders.length > 0;
     elements.readingList.replaceChildren(...orders.map((order) => { const article = document.createElement("article"); const info = document.createElement("div"); const title = document.createElement("strong"); const meta = document.createElement("span"); const link = document.createElement("a"); title.textContent = order.paperTitle; meta.textContent = `${order.productName} · ¥${order.price} · ${order.status}`; link.href = `paper-analysis.html?id=${encodeURIComponent(order.paperId)}#analysis-result`; link.textContent = "重新打开 →"; info.append(title, meta); article.append(info, link); return article; }));
@@ -107,7 +115,7 @@
       elements.unlock.textContent = "AI生成中……"; elements.checkoutStatus.textContent = "订单已获得权益，正在生成，请勿重复提交"; setCheckoutStep(2);
       const generatedResponse = await fetch(`${apiBase}/api/orders/${created.order.id}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: deviceId, paper: { paperId: paper.id, title: paper.title, authors: paper.authors, abstract: paper.abstract } }) });
       const generated = await generatedResponse.json(); if (!generatedResponse.ok) throw new Error(generated.error || "AI服务请求失败");
-      saveOrder("AI已生成", generated.order.analysis, generated.order); showApiResult(generated.order.analysis, true, generated.order.cached); renderReading(); elements.checkoutStatus.textContent = generated.order.cached ? "订单完成 · 已复用缓存" : "订单完成 · AI精读生成成功"; setCheckoutStep(3);
+      saveOrder("AI已生成", generated.order.analysis, generated.order); showApiResult(generated.order.analysis, true, generated.order.cached, generated.order.productId); renderReading(); elements.checkoutStatus.textContent = generated.order.cached ? "订单完成 · 已复用缓存" : "订单完成 · AI精读生成成功"; setCheckoutStep(3);
     } catch (error) { elements.checkoutStatus.textContent = `${error.message}；你仍可关闭后端后使用演示模式。`; setCheckoutStep(Math.max(0, elements.checkoutSteps.findIndex((step) => step.classList.contains("is-active"))), true); }
     finally { elements.unlock.disabled = false; elements.unlock.textContent = original; }
   }
@@ -115,7 +123,7 @@
   elements.unlock.addEventListener("click", unlock);
   elements.copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(currentMarkdown); elements.copyStatus.textContent = "Markdown 阅读卡已复制"; } catch (_) { elements.copyStatus.textContent = "复制失败，请手动选择内容"; } });
   renderPaper(); renderProducts(); renderCheckout(); renderReading(); setCheckoutStep(-1); checkApi();
-  if (location.hash === "#analysis-result" && paper) { const saved = readOrders().find((item) => item.paperId === paper.id && item.analysis); saved ? showApiResult(saved.analysis, false, true) : showDemo(false); }
+  if (location.hash === "#analysis-result" && paper) { const saved = readOrders().find((item) => item.paperId === paper.id && item.analysis); if (saved) { const savedProduct = products.find((item) => item.id === saved.productId); if (savedProduct) { currentProduct = savedProduct; renderProducts(); renderCheckout(); } showApiResult(saved.analysis, false, true, saved.productId); } else showDemo(false); }
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js");
 })();
 

@@ -6,7 +6,7 @@ if (!runtimeModules) throw new Error("PLAYWRIGHT_MODULE_PATH is required");
 const runtimeRequire = createRequire(path.join(runtimeModules, "package.json"));
 const { chromium, devices } = runtimeRequire("playwright");
 
-async function run(name, contextOptions, screenshotPath) {
+async function run(name, contextOptions, productName, expectedHeading, forbiddenHeading, screenshotPath) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
@@ -15,25 +15,32 @@ async function run(name, contextOptions, screenshotPath) {
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("http://127.0.0.1:8765/paper-analysis.html?id=2608.21360", { waitUntil: "networkidle" });
   await page.getByText("本地AI已连接").waitFor();
-  await page.getByRole("button", { name: /创新点提取/ }).click();
+  await page.getByRole("button", { name: new RegExp(productName) }).click();
   await page.locator("#mock-unlock").click();
   await page.getByRole("heading", { name: "AI精读已生成" }).waitFor();
   await page.getByText(/订单完成/).waitFor();
   const count = await page.locator("#reading-count").textContent();
   const stepsDone = await page.locator(".checkout-steps .is-done").count();
+  const headings = await page.locator("#analysis-result-grid h3").allTextContents();
   if (!count || !count.includes("1 条")) throw new Error(`${name}: reading list was not saved (${count})`);
   if (stepsDone !== 3) throw new Error(`${name}: expected 3 completed checkout steps, got ${stepsDone}`);
+  if (!headings.includes(expectedHeading)) throw new Error(`${name}: missing contracted heading ${expectedHeading}`);
+  if (forbiddenHeading && headings.includes(forbiddenHeading)) throw new Error(`${name}: leaked heading ${forbiddenHeading}`);
   if (errors.length) throw new Error(`${name}: browser errors: ${errors.join(" | ")}`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
+  if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true });
   await browser.close();
-  return { name, readingCount: count.trim(), checkoutSteps: stepsDone };
+  return { name, productName, readingCount: count.trim(), checkoutSteps: stepsDone, headings: headings.length };
 }
 
 (async () => {
   const outputDir = process.env.E2E_OUTPUT_DIR || process.cwd();
   const results = [];
-  results.push(await run("desktop", { viewport: { width: 1440, height: 1000 } }, path.join(outputDir, "paper-analysis-desktop.png")));
-  results.push(await run("mobile", { ...devices["iPhone 13"] }, path.join(outputDir, "paper-analysis-mobile.png")));
+  const desktop = { viewport: { width: 1440, height: 1000 } };
+  results.push(await run("desktop-quick", desktop, "快速简析", "阅读价值", "创新点候选"));
+  results.push(await run("desktop-innovation", desktop, "创新点提取", "必须核验的问题", "方法路线", path.join(outputDir, "paper-analysis-desktop.png")));
+  results.push(await run("desktop-deep", desktop, "深度解读", "复现准备", "作者摘要中文阅读版"));
+  results.push(await run("desktop-translate", desktop, "中文阅读版", "作者摘要中文阅读版", "关键结果"));
+  results.push(await run("mobile-innovation", { ...devices["iPhone 13"] }, "创新点提取", "必须核验的问题", "方法路线", path.join(outputDir, "paper-analysis-mobile.png")));
   process.stdout.write(`${JSON.stringify(results)}\n`);
 })().catch((error) => {
   process.stderr.write(`${error.stack || error.message}\n`);

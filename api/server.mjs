@@ -105,27 +105,48 @@ function readLedger() { return readJson(ledgerPath, { date: today(), requests: 0
 function checkBudget() { const value = readLedger(); if (value.date === today() && value.requests >= config.dailyLimit) throw new HttpError(429, "今日AI体验额度已用完，请明天再试", "daily_limit"); }
 function recordUsage(usage = {}) { const current = readLedger(); const value = current.date === today() ? current : { date: today(), requests: 0, inputTokens: 0, outputTokens: 0 }; value.requests += 1; value.inputTokens += Number(usage.input_tokens || 0); value.outputTokens += Number(usage.output_tokens || 0); atomicWrite(ledgerPath, value); }
 
-const schema = {
-  type: "object", additionalProperties: false,
-  properties: { summary: { type: "string" }, research_question: { type: "string" }, method: { type: "string" }, key_results: { type: "array", items: { type: "string" } }, innovations: { type: "array", items: { type: "string" } }, limitations: { type: "array", items: { type: "string" } }, reading_value: { type: "string" }, translation_excerpt: { type: "string" }, evidence_notice: { type: "string" } },
-  required: ["summary", "research_question", "method", "key_results", "innovations", "limitations", "reading_value", "translation_excerpt", "evidence_notice"]
-};
+const stringField = { type: "string" };
+const stringList = { type: "array", items: { type: "string" } };
+function strictSchema(properties) { return { type: "object", additionalProperties: false, properties, required: Object.keys(properties) }; }
+const productContracts = Object.freeze({
+  quick: {
+    schema: strictSchema({ summary: stringField, research_question: stringField, method: stringField, key_results: stringList, reading_value: stringField, evidence_notice: stringField }),
+    instruction: "用最短路径回答论文在做什么。结果不超过3条，只写摘要明确披露的信息。"
+  },
+  innovation: {
+    schema: strictSchema({ summary: stringField, innovations: stringList, evidence_checks: stringList, comparison_questions: stringList, evidence_notice: stringField }),
+    instruction: "只提取作者声称的创新候选。每个候选都给出摘要内证据线索，并列出必须通过相关工作或全文核验的问题。"
+  },
+  deep: {
+    schema: strictSchema({ summary: stringField, research_question: stringField, method: stringField, key_results: stringList, innovations: stringList, limitations: stringList, reproduction_steps: stringList, reading_value: stringField, evidence_notice: stringField }),
+    instruction: "按问题、方法、结果、创新候选、局限、复现准备完整展开；不能从摘要推断实验配置。"
+  },
+  translate: {
+    schema: strictSchema({ summary: stringField, translation: stringField, glossary: stringList, hard_sentences: stringList, evidence_notice: stringField }),
+    instruction: "完整翻译作者摘要，保持术语一致；列出核心术语中英对照和最难理解的原句释义。不得声称翻译了全文。"
+  }
+});
 function prompt(input) {
   const serviceNames = { quick: "快速简析", innovation: "创新点提取", deep: "深度解读", translate: "中文阅读版预览" };
-  return `你是面向中国本科生的严谨论文阅读助手。只依据下面的作者摘要分析，不得假装读过全文，不得把作者主张写成已被独立验证的事实。服务类型：${serviceNames[input.service]}。创新点必须写成候选并指出需要相关工作对比；摘要未披露的信息明确写“摘要未披露”。所有字段使用简洁中文。\n\n论文：${input.title}\n作者：${input.authors.join(", ")}\narXiv：${input.paperId}\n作者摘要：${input.abstract}`;
+  return `你是面向中国本科生的严谨论文阅读助手。只依据下面的作者摘要分析，不得假装读过全文，不得把作者主张写成已被独立验证的事实。服务类型：${serviceNames[input.service]}。${productContracts[input.service].instruction} 摘要未披露的信息明确写“摘要未披露”。evidence_notice 必须说明“仅基于作者摘要，未经全文与独立来源核验”。所有字段使用简洁中文。\n\n论文：${input.title}\n作者：${input.authors.join(", ")}\narXiv：${input.paperId}\n作者摘要：${input.abstract}`;
 }
 function mockAnalysis(input) {
-  return { summary: `这是一份用于测试订单权益流程的${productMap.get(input.service).name}结果。`, research_question: "从作者摘要中识别研究试图解决的核心问题。", method: "测试模式不调用外部模型，仅验证结构化交付。", key_results: ["订单、支付、权益与生成状态均已连通"], innovations: ["创新性仍需结合相关工作与全文核验"], limitations: ["当前为测试结果，不可作为真实论文结论"], reading_value: "适合验证产品交互和订单流程。", translation_excerpt: "测试模式未执行真实翻译。", evidence_notice: "仅用于开发测试。" };
+  const summary = `这是一份用于测试${productMap.get(input.service).name}权益的模拟结果。`;
+  const evidence_notice = "仅基于作者摘要，未经全文与独立来源核验；当前内容为开发测试。";
+  if (input.service === "quick") return { summary, research_question: "识别摘要中明确提出的核心问题。", method: "测试模式仅验证快速简析交付。", key_results: ["快速简析字段与其他商品隔离"], reading_value: "适合判断是否值得阅读全文。", evidence_notice };
+  if (input.service === "innovation") return { summary, innovations: ["作者声称的创新候选，尚未独立验证"], evidence_checks: ["摘要中的方法描述可作为初步证据线索"], comparison_questions: ["与最近相关工作相比是否真正新增能力？"], evidence_notice };
+  if (input.service === "deep") return { summary, research_question: "摘要披露的研究问题。", method: "摘要披露的方法路线。", key_results: ["摘要披露的结果线索"], innovations: ["需要相关工作对比的创新候选"], limitations: ["摘要无法提供完整实验细节"], reproduction_steps: ["阅读全文并确认数据、代码和指标"], reading_value: "适合进入全文精读。", evidence_notice };
+  return { summary, translation: "测试模式未执行真实翻译；此字段用于验证中文阅读版交付。", glossary: ["benchmark：基准测试"], hard_sentences: ["需结合英文原句确认语义。"], evidence_notice };
 }
 async function analyze(input) {
-  const key = crypto.createHash("sha256").update(JSON.stringify([input.paperId, input.service, input.abstract])).digest("hex");
+  const key = crypto.createHash("sha256").update(JSON.stringify(["contract-v2", input.paperId, input.service, input.abstract])).digest("hex");
   const file = path.join(cacheDir, `${key}.json`);
   if (fs.existsSync(file)) return { ...readJson(file, {}), cached: true };
   if (config.mockAi) { const stored = { paperId: input.paperId, service: input.service, model: "mock", generatedAt: new Date().toISOString(), analysis: mockAnalysis(input) }; atomicWrite(file, stored); return { ...stored, cached: false }; }
   if (!process.env.OPENAI_API_KEY) throw new HttpError(503, "服务端尚未配置AI密钥", "key_missing");
-  checkBudget(); const product = productMap.get(input.service);
+  checkBudget(); const product = productMap.get(input.service); const contract = productContracts[input.service];
   let response;
-  try { response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify({ model: config.model, input: prompt(input), max_output_tokens: product.maxOutputTokens, store: false, text: { format: { type: "json_schema", name: "paper_analysis", strict: true, schema } } }) }); }
+  try { response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify({ model: config.model, input: prompt(input), max_output_tokens: product.maxOutputTokens, store: false, text: { format: { type: "json_schema", name: `paper_${input.service}`, strict: true, schema: contract.schema } } }) }); }
   catch { throw new HttpError(503, "服务器暂时无法连接AI服务", "upstream_unreachable"); }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) { const code = payload?.error?.code; const message = code === "billing_not_active" ? "AI账户尚未开通API计费" : response.status === 429 ? "AI账户额度不足或请求过于频繁" : "AI服务暂时不可用"; throw new HttpError(response.status === 429 ? 429 : 502, message, code || "upstream_error"); }

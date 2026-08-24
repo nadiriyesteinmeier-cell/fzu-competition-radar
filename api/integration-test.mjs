@@ -22,17 +22,34 @@ try {
   const productResult = await request("/api/products"); assert(productResult.value.products.length === 4, "Expected four products");
   const invalid = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); assert(invalid.response.status === 400, "Invalid order guard failed");
   const clientId = crypto.randomUUID();
-  const orderInput = { clientId, paperId: "2608.21360", paperTitle: "Test Paper", productId: "quick" };
-  const created = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(orderInput) });
-  assert(created.response.status === 201 && created.value.order.status === "pending_payment" && created.value.order.priceFen === 190, "Order creation failed");
-  const orderId = created.value.order.id;
-  const paper = { paperId: orderInput.paperId, title: orderInput.paperTitle, authors: ["Test Author"], abstract: "We introduce a test method and report a test result." };
-  const unpaid = await request(`/api/orders/${orderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) }); assert(unpaid.response.status === 402, "Unpaid generation was not blocked");
-  const paid = await request(`/api/orders/${orderId}/mock-pay`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId }) }); assert(paid.value.order.status === "paid", "Mock payment failed");
-  const generated = await request(`/api/orders/${orderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) }); assert(generated.value.order.status === "completed" && generated.value.order.analysis.summary, "Generation failed");
-  const repeated = await request(`/api/orders/${orderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) }); assert(repeated.value.order.status === "completed", "Idempotent repeat failed");
-  const wrongClient = await request(`/api/orders/${orderId}?clientId=${crypto.randomUUID()}`); assert(wrongClient.response.status === 404, "Order ownership guard failed");
-  console.log(JSON.stringify({ health: "ok", products: 4, unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", ownership: "ok" }));
+  const paper = { paperId: "2608.21360", title: "Test Paper", authors: ["Test Author"], abstract: "We introduce a test method and report a test result." };
+  const contracts = {
+    quick: ["evidence_notice", "key_results", "method", "reading_value", "research_question", "summary"],
+    innovation: ["comparison_questions", "evidence_checks", "evidence_notice", "innovations", "summary"],
+    deep: ["evidence_notice", "innovations", "key_results", "limitations", "method", "reading_value", "reproduction_steps", "research_question", "summary"],
+    translate: ["evidence_notice", "glossary", "hard_sentences", "summary", "translation"]
+  };
+  let firstOrderId = "";
+  for (const product of productResult.value.products) {
+    const orderInput = { clientId, paperId: paper.paperId, paperTitle: paper.title, productId: product.id };
+    const created = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(orderInput) });
+    assert(created.response.status === 201 && created.value.order.status === "pending_payment" && created.value.order.priceFen === product.priceFen, `${product.id}: order creation failed`);
+    const orderId = created.value.order.id;
+    if (!firstOrderId) {
+      firstOrderId = orderId;
+      const unpaid = await request(`/api/orders/${orderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) });
+      assert(unpaid.response.status === 402, "Unpaid generation was not blocked");
+    }
+    const paid = await request(`/api/orders/${orderId}/mock-pay`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId }) });
+    assert(paid.value.order.status === "paid", `${product.id}: mock payment failed`);
+    const generated = await request(`/api/orders/${orderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) });
+    const keys = Object.keys(generated.value.order.analysis || {}).sort();
+    assert(generated.value.order.status === "completed", `${product.id}: generation failed`);
+    assert(JSON.stringify(keys) === JSON.stringify(contracts[product.id]), `${product.id}: product contract leaked or omitted fields (${keys.join(",")})`);
+  }
+  const repeated = await request(`/api/orders/${firstOrderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) }); assert(repeated.value.order.status === "completed", "Idempotent repeat failed");
+  const wrongClient = await request(`/api/orders/${firstOrderId}?clientId=${crypto.randomUUID()}`); assert(wrongClient.response.status === 404, "Order ownership guard failed");
+  console.log(JSON.stringify({ health: "ok", products: 4, productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", ownership: "ok" }));
 } finally {
   child.kill();
   await new Promise((resolve) => child.once("exit", resolve));
