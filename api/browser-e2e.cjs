@@ -28,8 +28,13 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   if (forbiddenHeading && headings.includes(forbiddenHeading)) throw new Error(`${name}: leaked heading ${forbiddenHeading}`);
   if (errors.length) throw new Error(`${name}: browser errors: ${errors.join(" | ")}`);
   if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true });
+  await page.evaluate(() => localStorage.removeItem("student-radar-paper-orders-v1"));
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText("本地AI已连接").waitFor();
+  const restoredCount = await page.locator("#reading-count").textContent();
+  if (!restoredCount || !restoredCount.includes("1 条")) throw new Error(`${name}: server history did not restore local reading list (${restoredCount})`);
   await browser.close();
-  return { name, productName, readingCount: count.trim(), checkoutSteps: stepsDone, headings: headings.length };
+  return { name, productName, readingCount: count.trim(), restored: restoredCount.trim(), checkoutSteps: stepsDone, headings: headings.length };
 }
 
 (async () => {

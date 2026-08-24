@@ -48,8 +48,13 @@ try {
     assert(JSON.stringify(keys) === JSON.stringify(contracts[product.id]), `${product.id}: product contract leaked or omitted fields (${keys.join(",")})`);
   }
   const repeated = await request(`/api/orders/${firstOrderId}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId, paper }) }); assert(repeated.value.order.status === "completed", "Idempotent repeat failed");
+  const history = await request(`/api/orders?clientId=${clientId}`);
+  assert(history.response.ok && history.value.orders.length === 4 && history.value.orders.every((order) => order.status === "completed" && order.analysis), "Device order history failed");
+  const emptyHistory = await request(`/api/orders?clientId=${crypto.randomUUID()}`);
+  assert(emptyHistory.response.ok && emptyHistory.value.orders.length === 0, "Order history ownership isolation failed");
+  const invalidHistory = await request("/api/orders"); assert(invalidHistory.response.status === 400, "Invalid history client guard failed");
   const wrongClient = await request(`/api/orders/${firstOrderId}?clientId=${crypto.randomUUID()}`); assert(wrongClient.response.status === 404, "Order ownership guard failed");
-  console.log(JSON.stringify({ health: "ok", products: 4, productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", ownership: "ok" }));
+  console.log(JSON.stringify({ health: "ok", products: 4, productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "isolated", ownership: "ok" }));
 } finally {
   child.kill();
   await new Promise((resolve) => child.once("exit", resolve));

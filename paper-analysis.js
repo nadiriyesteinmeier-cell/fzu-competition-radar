@@ -12,7 +12,7 @@
   ];
   const requestedId = new URLSearchParams(location.search).get("id");
   const paper = papers.find((item) => item.id === requestedId) || papers[0];
-  const apiBase = ["127.0.0.1", "localhost"].includes(location.hostname) ? "http://127.0.0.1:8787" : "";
+  const apiBase = resolveApiBase();
   let apiAvailable = false;
   let currentProduct = products[0];
   let currentMarkdown = "";
@@ -27,6 +27,13 @@
   };
 
   function $(selector) { return document.querySelector(selector); }
+  function resolveApiBase() {
+    const local = ["127.0.0.1", "localhost"].includes(location.hostname);
+    const candidate = String(window.STUDENT_RADAR_CONFIG?.apiBase || (local ? "http://127.0.0.1:8787" : "")).trim().replace(/\/$/, "");
+    if (!candidate) return "";
+    try { const url = new URL(candidate); if (url.protocol === "https:" || (local && url.protocol === "http:")) return url.origin + url.pathname.replace(/\/$/, ""); } catch (_) {}
+    return "";
+  }
   function sentences(text) { return (text.match(/[^.!?]+[.!?]+/g) || [text]).map((item) => item.trim()).filter(Boolean); }
   function findSentence(pattern, fallbackIndex) { const list = sentences(paper?.abstract || ""); return list.find((item) => pattern.test(item)) || list[Math.max(0, Math.min(fallbackIndex, list.length - 1))] || "作者摘要未提供足够信息。"; }
   function demoParts() {
@@ -65,14 +72,26 @@
     });
   }
   function readOrders() { try { const value = JSON.parse(localStorage.getItem(orderKey) || "[]"); return Array.isArray(value) ? value : []; } catch (_) { return []; } }
+  function writeOrders(orders) { localStorage.setItem(orderKey, JSON.stringify(orders.slice(0, 30))); }
   function clientId() {
     let value = localStorage.getItem(clientKey);
     if (!/^[A-Za-z0-9-]{16,80}$/.test(value || "")) { value = crypto.randomUUID(); localStorage.setItem(clientKey, value); }
     return value;
   }
   function saveOrder(status, analysis, backendOrder) {
-    const orders = readOrders(); orders.unshift({ id: backendOrder?.id || `${status === "AI已生成" ? "AI" : "DEMO"}-${Date.now()}`, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id, productName: currentProduct.name, price: backendOrder ? String(backendOrder.priceFen / 100) : currentProduct.price, createdAt: backendOrder?.createdAt || new Date().toISOString(), status, analysis: analysis || null });
-    localStorage.setItem(orderKey, JSON.stringify(orders.slice(0, 30)));
+    const orders = readOrders(); const item = { id: backendOrder?.id || `${status === "AI已生成" ? "AI" : "DEMO"}-${Date.now()}`, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id, productName: currentProduct.name, price: backendOrder ? String(backendOrder.priceFen / 100) : currentProduct.price, createdAt: backendOrder?.createdAt || new Date().toISOString(), status, analysis: analysis || null };
+    writeOrders([item, ...orders.filter((order) => order.id !== item.id)]);
+  }
+  function mergeRemoteOrders(remoteOrders) {
+    const labels = { pending_payment: "待确认权益", paid: "待生成", processing: "生成中", completed: "AI已生成" };
+    const merged = new Map(readOrders().map((order) => [order.id, order]));
+    remoteOrders.forEach((order) => merged.set(order.id, { id: order.id, paperId: order.paperId, paperTitle: order.paperTitle, productId: order.productId, productName: order.productName, price: String(order.priceFen / 100), createdAt: order.createdAt, status: labels[order.status] || order.status, analysis: order.analysis || null }));
+    const orders = [...merged.values()].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30); writeOrders(orders); renderReading(); return remoteOrders.length;
+  }
+  async function syncOrderHistory() {
+    const response = await fetch(`${apiBase}/api/orders?clientId=${encodeURIComponent(clientId())}`, { signal: AbortSignal.timeout(2500) });
+    const value = await response.json(); if (!response.ok || !Array.isArray(value.orders)) throw new Error(value.error || "订单同步失败");
+    return mergeRemoteOrders(value.orders);
   }
   function renderResult(parts, mode, scroll, notice) {
     elements.resultGrid.replaceChildren(...parts.map(([title, text]) => { const article = document.createElement("article"); const heading = document.createElement("h3"); const paragraph = document.createElement("p"); heading.textContent = title; paragraph.textContent = text || "摘要未披露"; article.append(heading, paragraph); return article; }));
@@ -98,8 +117,8 @@
       if (!apiAvailable) throw new Error();
       const productResponse = await fetch(`${apiBase}/api/products`); const catalog = await productResponse.json();
       if (productResponse.ok) catalog.products.forEach((serverProduct) => { const local = products.find((item) => item.id === serverProduct.id); if (local) { local.price = String(serverProduct.priceFen / 100); local.name = serverProduct.name; } });
-      renderProducts(); renderCheckout();
-      elements.runtime.textContent = "本地AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `模型 ${value.model} · ${value.paymentMode === "mock" ? "本地模拟支付" : "等待支付回调"} · 每日上限 ${value.dailyLimit} 次`;
+      renderProducts(); renderCheckout(); const synced = await syncOrderHistory();
+      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `模型 ${value.model} · ${value.paymentMode === "mock" ? "本地模拟支付" : "等待支付回调"} · 已同步 ${synced} 个设备订单`;
     } catch (_) { elements.checkoutStatus.textContent = "本地AI服务未启动；当前使用演示模式。"; }
   }
   async function unlock() {

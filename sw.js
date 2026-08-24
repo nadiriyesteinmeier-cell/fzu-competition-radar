@@ -1,5 +1,5 @@
-const CACHE = "student-radar-v21";
-const APP_SHELL = ["./", "./index.html", "./papers.html", "./paper-analysis.html", "./cet.html", "./pro.html", "./focus.html", "./profile.html", "./feedback.html", "./privacy.html", "./404.html", "./styles.css", "./app.js", "./papers.js", "./paper-analysis.js", "./cet.js", "./pro.js", "./focus.js", "./profile.js", "./feedback.js", "./share.js", "./data/events.js", "./data/forecast-events.js", "./data/recognitions.js", "./data/pro-briefs.js", "./data/cumcm-focus.js", "./data/papers.js", "./sources.html", "./icon.svg", "./share-card.png", "./manifest.webmanifest"];
+const CACHE = "student-radar-v22";
+const APP_SHELL = ["./", "./index.html", "./papers.html", "./paper-analysis.html", "./cet.html", "./pro.html", "./focus.html", "./profile.html", "./feedback.html", "./privacy.html", "./404.html", "./styles.css", "./config.js", "./app.js", "./papers.js", "./paper-analysis.js", "./cet.js", "./pro.js", "./focus.js", "./profile.js", "./feedback.js", "./share.js", "./data/events.js", "./data/forecast-events.js", "./data/recognitions.js", "./data/pro-briefs.js", "./data/cumcm-focus.js", "./data/papers.js", "./sources.html", "./icon.svg", "./share-card.png", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));

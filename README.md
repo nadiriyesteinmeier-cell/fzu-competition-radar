@@ -16,6 +16,8 @@
 
 本地开发环境可连接相邻目录 `student-radar-api` 的论文精读后端：后端使用 Responses API 和 JSON Schema 返回结构化中文结果，密钥只存在服务端，并带服务端定价、订单归属校验、未支付拦截、每日请求上限、输入长度限制和按论文/服务类型缓存。GitHub Pages 未配置 HTTPS 后端时会自动回退到无费用的演示结果。
 
+连接后端后，论文页会自动同步当前匿名设备最近 30 个订单；即使本地精读列表被清掉，也能在同一浏览器恢复。该设备标识不是账号，暂不支持跨浏览器或跨设备同步。未来部署云端只需在公开的 `config.js` 填写 HTTPS API 地址，密钥仍只放在后端。
+
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html

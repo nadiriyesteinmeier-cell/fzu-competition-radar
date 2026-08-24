@@ -76,6 +76,10 @@ function findOrder(id, clientId) {
   if (index < 0) throw new HttpError(404, "订单不存在", "order_not_found");
   return { orders, index, order: orders[index] };
 }
+function listOrders(clientId) {
+  if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
+  return readOrders().filter((item) => item.clientId === clientId).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30).map(publicOrder);
+}
 function createOrder(input) {
   if (!validClientId(input.clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
   if (!validPaperId(input.paperId)) throw new HttpError(400, "论文编号无效", "invalid_paper");
@@ -170,8 +174,9 @@ const server = http.createServer(async (req, res) => {
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
   if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-allow-headers": "content-type", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai" }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "device" }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
+    if (req.method === "GET" && url.pathname === "/api/orders") return json(res, 200, { orders: listOrders(url.searchParams.get("clientId")), identityMode: "device" }, origin);
     if (req.method === "POST" && url.pathname === "/api/orders") return json(res, 201, { order: publicOrder(createOrder(await body(req))) }, origin);
     const match = url.pathname.match(/^\/api\/orders\/([0-9a-f-]+)(?:\/(mock-pay|generate))?$/i);
     if (match && req.method === "GET" && !match[2]) return json(res, 200, { order: publicOrder(findOrder(match[1], url.searchParams.get("clientId")).order) }, origin);
