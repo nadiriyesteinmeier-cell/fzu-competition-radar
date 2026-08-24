@@ -464,6 +464,41 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .profile-benefits span { padding: 6px 8px; color: #cbd2c6; background: #30372c; border-radius: 99px; font-size: 9px; }
 .profile-preview .copy-status { color: var(--lime); }
 .profile-next { margin-top: 16px; }
+.profile-dashboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 16px 0; overflow: hidden; background: var(--line); border: 1px solid var(--line); border-radius: 18px; }
+.profile-stat { padding: 20px; background: white; }
+.profile-stat strong, .profile-stat span { display: block; }
+.profile-stat strong { font-size: 32px; line-height: 1; letter-spacing: -.04em; }
+.profile-stat span { margin-top: 8px; color: var(--muted); font-size: 11px; }
+.workspace-section { margin: 16px 0; padding: clamp(20px, 3vw, 30px); background: white; border: 1px solid var(--line); border-radius: var(--radius); }
+.workspace-section .section-head h2 { font-size: clamp(28px, 4vw, 40px); }
+.workspace-clear { padding: 8px 11px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 9px; font-size: 10px; cursor: pointer; }
+.workspace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.workspace-card { min-width: 0; padding: 19px; background: #f5f6f2; border-radius: 15px; }
+.workspace-focus { color: white; background: var(--ink); }
+.workspace-card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.workspace-card-head span { color: var(--lime-dark); font: 800 9px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; }
+.workspace-focus .workspace-card-head span { color: var(--lime); }
+.workspace-card-head h3 { margin: 6px 0 0; font-size: 18px; letter-spacing: -.025em; }
+.workspace-card-head > a { flex: 0 0 auto; color: var(--lime-dark); font-size: 10px; font-weight: 800; }
+.workspace-focus .workspace-card-head > a { color: var(--lime); }
+.workspace-list { display: grid; gap: 1px; margin-top: 15px; overflow: hidden; background: var(--line); border-radius: 9px; }
+.workspace-focus .workspace-list { background: #394035; }
+.workspace-list > div { display: flex; justify-content: space-between; gap: 10px; align-items: center; min-width: 0; padding: 11px 12px; background: white; }
+.workspace-focus .workspace-list > div { background: #1b2118; }
+.workspace-list > div > div { min-width: 0; }
+.workspace-list strong, .workspace-list span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.workspace-list strong { font-size: 11px; }
+.workspace-list span { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.workspace-focus .workspace-list span { color: #9fa89a; }
+.workspace-list a { flex: 0 0 auto; color: var(--lime-dark); font-size: 9px; font-weight: 850; }
+.workspace-focus .workspace-list a { color: var(--lime); }
+.workspace-empty { margin: 18px 0 0; color: var(--muted); font-size: 11px; }
+.workspace-focus .workspace-empty { color: #9fa89a; }
+.collection-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+.collection-links a { padding: 14px; color: var(--ink); background: white; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; }
+.collection-links strong, .collection-links span { display: block; }
+.collection-links strong { color: var(--lime-dark); font-size: 25px; }
+.collection-links span { margin-top: 5px; color: var(--muted); font-size: 9px; }
 
 @media (max-width: 760px) {
   .pro-teaser { align-items: flex-start; flex-direction: column; padding: 20px; }
@@ -477,6 +512,8 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .sprint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .action-steps li { grid-template-columns: 1fr; gap: 5px; }
   .validation-card, .profile-preview { position: static; }
+  .profile-dashboard { grid-template-columns: 1fr 1fr; }
+  .workspace-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 440px) {
@@ -612,3 +649,4 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .analysis-result-grid article:first-child { grid-column: auto; }
   .reading-list article { align-items: flex-start; flex-direction: column; }
 }
+
