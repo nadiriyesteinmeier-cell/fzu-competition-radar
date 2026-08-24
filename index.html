@@ -33,9 +33,10 @@
       <h1>别再错过<br><em>报名与交稿时间</em></h1>
       <p>只整理公开通知，保留原文链接与核验时间。平台不是赛事官方，最终安排以主办方和福州大学最新通知为准。</p>
       <div class="hero-share-row"><button type="button" data-share data-share-title="福大竞赛雷达" data-share-text="报名、比赛和交稿节点可以直接加入日历。">分享给同学</button><span aria-live="polite"></span></div>
-      <div class="stats" aria-label="数据概览">
+      <div class="stats stats-four" aria-label="数据概览">
         <div><strong id="verified-count">0</strong><span>已核验赛事</span></div>
         <div><strong id="upcoming-count">0</strong><span>30天内节点</span></div>
+        <div><strong id="recognition-count">0</strong><span>福大认定目录</span></div>
         <div><strong id="latest-date">—</strong><span>最近核验</span></div>
       </div>
     </section>
@@ -53,19 +54,55 @@
       </div>
     </section>
 
-    <section class="list-section">
+    <section class="list-section timeline-section">
       <div class="section-head">
         <div>
           <p class="eyebrow">OPEN & UPCOMING</p>
-          <h2>竞赛时间线</h2>
+          <h2>近期竞赛时间轴</h2>
         </div>
         <span id="result-count" class="result-count"></span>
       </div>
-      <div id="event-list" class="event-list"></div>
+      <div class="timeline-shell">
+        <div class="timeline-toolbar">
+          <span>按下一关键节点排序 · 点击圆点展开</span>
+          <div>
+            <button id="timeline-prev" type="button" aria-label="上一个竞赛">←</button>
+            <button id="timeline-next" type="button" aria-label="下一个竞赛">→</button>
+          </div>
+        </div>
+        <div id="timeline-scroll" class="timeline-scroll" tabindex="0" aria-label="可横向滚动的竞赛时间轴">
+          <div id="timeline-track" class="timeline-track"></div>
+        </div>
+      </div>
       <div id="empty-state" class="empty-state" hidden>
         <h3>没有匹配的竞赛</h3>
         <p>清除筛选条件，或等待下一次官方通知更新。</p>
       </div>
+      <div id="event-detail" class="event-detail" aria-live="polite"></div>
+    </section>
+
+    <section class="recognition-section">
+      <details id="recognition-directory" class="directory-panel">
+        <summary>
+          <span><small>FZU RECOGNIZED DIRECTORY · 2026</small><strong>浏览福大认定竞赛目录</strong></span>
+          <b><span id="directory-total">185</span> 项 ＋</b>
+        </summary>
+        <div class="directory-content">
+          <p class="directory-intro">这里展示两份福大2026认定表中的全部赛事，但不代表它们当前正在报名。只有核验到当届官方时间后，赛事才会进入上方时间轴。</p>
+          <div class="directory-controls">
+            <label class="search">
+              <span class="sr-only">搜索福大认定赛事</span>
+              <input id="directory-search" type="search" placeholder="搜索竞赛名称或主办方">
+            </label>
+            <label><span class="sr-only">按认定级别筛选</span><select id="directory-level"><option value="全部">全部级别</option></select></label>
+            <label><span class="sr-only">按认定方式筛选</span><select id="directory-type"><option value="全部">全部认定方式</option><option value="direct">直接认定</option><option value="classified">分级认定</option></select></label>
+          </div>
+          <div class="directory-head"><span id="directory-count"></span><small>最终认定以福州大学审核为准</small></div>
+          <div id="directory-list" class="directory-list"></div>
+          <button id="directory-more" class="load-more" type="button">再显示 18 项</button>
+          <div id="directory-empty" class="empty-state" hidden><h3>没有匹配的认定赛事</h3><p>换一个简称或清除筛选条件。</p></div>
+        </div>
+      </details>
     </section>
 
     <section class="sources">
@@ -89,8 +126,8 @@
     <span><a href="papers.html">论文</a> · <a href="cet.html">四六级</a> · <a href="feedback.html">2分钟反馈</a> · <a href="privacy.html">隐私</a></span>
   </footer>
 
-  <template id="event-template">
-    <article class="event-card">
+  <template id="event-detail-template">
+    <article class="event-card event-detail-card">
       <div class="card-top">
         <div class="badges"></div>
         <button class="favorite-button" type="button" aria-label="收藏竞赛">☆</button>
@@ -110,6 +147,7 @@
   </template>
 
   <script src="data/events.js"></script>
+  <script src="data/recognitions.js"></script>
   <script src="app.js"></script>
   <script src="share.js"></script>
 </body>

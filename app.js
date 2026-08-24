@@ -2,8 +2,10 @@
   "use strict";
 
   const events = Array.isArray(window.COMPETITION_EVENTS) ? window.COMPETITION_EVENTS : [];
+  const recognitionData = window.FZU_RECOGNITION_DATA || { items: [] };
+  const recognitions = Array.isArray(recognitionData.items) ? recognitionData.items : [];
   const now = new Date();
-  const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+  const DAY = 24 * 60 * 60 * 1000;
   const favoriteKey = "fzu-radar-favorites-v1";
   const state = {
     category: "全部",
@@ -11,12 +13,19 @@
     soonOnly: false,
     recognizedOnly: false,
     favoritesOnly: false,
-    favorites: loadFavorites()
+    favorites: loadFavorites(),
+    selectedId: events[0]?.id || null,
+    directoryQuery: "",
+    directoryLevel: "全部",
+    directoryType: "全部",
+    directoryLimit: 18
   };
 
   const elements = {
-    list: document.querySelector("#event-list"),
-    template: document.querySelector("#event-template"),
+    track: document.querySelector("#timeline-track"),
+    scroll: document.querySelector("#timeline-scroll"),
+    detail: document.querySelector("#event-detail"),
+    template: document.querySelector("#event-detail-template"),
     empty: document.querySelector("#empty-state"),
     count: document.querySelector("#result-count"),
     categories: document.querySelector("#category-filters"),
@@ -24,27 +33,32 @@
     soonOnly: document.querySelector("#soon-only"),
     recognizedOnly: document.querySelector("#recognized-only"),
     favoritesOnly: document.querySelector("#favorites-only"),
+    previous: document.querySelector("#timeline-prev"),
+    next: document.querySelector("#timeline-next"),
     verifiedCount: document.querySelector("#verified-count"),
     upcomingCount: document.querySelector("#upcoming-count"),
+    recognitionCount: document.querySelector("#recognition-count"),
     latestDate: document.querySelector("#latest-date"),
+    directorySearch: document.querySelector("#directory-search"),
+    directoryLevel: document.querySelector("#directory-level"),
+    directoryType: document.querySelector("#directory-type"),
+    directoryCount: document.querySelector("#directory-count"),
+    directoryList: document.querySelector("#directory-list"),
+    directoryMore: document.querySelector("#directory-more"),
+    directoryEmpty: document.querySelector("#directory-empty"),
     install: document.querySelector("#install-button")
   };
 
   function loadFavorites() {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(favoriteKey) || "[]"));
-    } catch (_) {
-      return new Set();
-    }
+    try { return new Set(JSON.parse(localStorage.getItem(favoriteKey) || "[]")); }
+    catch (_) { return new Set(); }
   }
 
   function saveFavorites() {
     localStorage.setItem(favoriteKey, JSON.stringify([...state.favorites]));
   }
 
-  function dateOf(milestone) {
-    return new Date(milestone.at);
-  }
+  function dateOf(milestone) { return new Date(milestone.at); }
 
   function formatDate(value, withTime = true) {
     const options = withTime
@@ -57,33 +71,38 @@
     return event.milestones.filter((milestone) => dateOf(milestone) >= now);
   }
 
+  function nextMilestone(event) {
+    return futureMilestones(event)[0] || event.milestones.at(-1);
+  }
+
   function hasMilestoneSoon(event) {
     return event.milestones.some((milestone) => {
       const delta = dateOf(milestone) - now;
-      return delta >= 0 && delta <= THIRTY_DAYS;
+      return delta >= 0 && delta <= 30 * DAY;
     });
   }
 
   function countdown(value) {
     const delta = new Date(value) - now;
     if (delta < 0) return "已结束";
-    const days = Math.floor(delta / (24 * 60 * 60 * 1000));
-    const hours = Math.floor((delta % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    if (days === 0) return hours === 0 ? "不到1小时" : `${hours}小时后`;
-    return `${days}天后`;
+    const days = Math.floor(delta / DAY);
+    const hours = Math.floor((delta % DAY) / (60 * 60 * 1000));
+    return days ? `${days}天后` : (hours ? `${hours}小时后` : "不到1小时");
   }
 
   function verificationLabel(value) {
-    return {
-      "school-official": "福大官方",
-      "organizer-official": "组委会官方",
-      "government-official": "政府官方"
-    }[value] || "来源已核验";
+    return { "school-official": "福大官方", "organizer-official": "组委会官方", "government-official": "政府官方" }[value] || "来源已核验";
+  }
+
+  function addText(parent, className, text) {
+    const node = document.createElement("span");
+    node.className = className;
+    node.textContent = text;
+    parent.append(node);
   }
 
   function renderCategories() {
-    const categories = ["全部", ...new Set(events.map((event) => event.category))];
-    categories.forEach((category) => {
+    ["全部", ...new Set(events.map((event) => event.category))].forEach((category) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "chip";
@@ -91,10 +110,8 @@
       button.setAttribute("aria-pressed", String(category === state.category));
       button.addEventListener("click", () => {
         state.category = category;
-        elements.categories.querySelectorAll(".chip").forEach((chip) => {
-          chip.setAttribute("aria-pressed", String(chip === button));
-        });
-        render();
+        elements.categories.querySelectorAll(".chip").forEach((chip) => chip.setAttribute("aria-pressed", String(chip === button)));
+        renderTimeline();
       });
       elements.categories.append(button);
     });
@@ -109,31 +126,35 @@
         && (!state.soonOnly || hasMilestoneSoon(event))
         && (!state.recognizedOnly || Boolean(event.recognition))
         && (!state.favoritesOnly || state.favorites.has(event.id));
-    }).sort((a, b) => {
-      const aNext = futureMilestones(a)[0];
-      const bNext = futureMilestones(b)[0];
-      return (aNext ? dateOf(aNext) : Infinity) - (bNext ? dateOf(bNext) : Infinity);
-    });
+    }).sort((a, b) => dateOf(nextMilestone(a)) - dateOf(nextMilestone(b)));
   }
 
-  function addText(parent, className, text) {
-    const node = document.createElement("span");
-    node.className = className;
-    node.textContent = text;
-    parent.append(node);
+  function renderPoint(event) {
+    const milestone = nextMilestone(event);
+    const point = document.createElement("button");
+    point.type = "button";
+    point.className = "timeline-point";
+    point.dataset.eventId = event.id;
+    point.setAttribute("aria-pressed", String(event.id === state.selectedId));
+    point.innerHTML = `<time></time><span class="timeline-dot"></span><strong></strong><small></small>`;
+    point.querySelector("time").textContent = formatDate(milestone.at, false).slice(5);
+    point.querySelector("strong").textContent = event.title;
+    point.querySelector("small").textContent = milestone.label;
+    if (event.id === state.selectedId) point.classList.add("is-selected");
+    if (state.favorites.has(event.id)) point.classList.add("is-favorite");
+    point.addEventListener("click", () => selectEvent(event.id));
+    return point;
   }
 
-  function renderCard(event) {
+  function renderDetail(event) {
+    if (!event) { elements.detail.replaceChildren(); return; }
     const card = elements.template.content.firstElementChild.cloneNode(true);
     const badges = card.querySelector(".badges");
     addText(badges, "badge badge-category", event.category);
     addText(badges, "badge", event.level);
     addText(badges, "badge badge-verified", verificationLabel(event.verification));
     if (event.recognition) {
-      const recognitionText = event.recognition.status === "direct"
-        ? `福大直接认定 · ${event.recognition.level}`
-        : `福大目录赛事 · ${event.recognition.level}`;
-      addText(badges, "badge badge-recognized", recognitionText);
+      addText(badges, "badge badge-recognized", event.recognition.status === "direct" ? `福大直接认定 · ${event.recognition.level}` : `福大目录赛事 · ${event.recognition.level}`);
     } else {
       addText(badges, "badge badge-unmatched", "福大2026表未匹配");
     }
@@ -146,11 +167,10 @@
     const next = futureMilestones(event)[0];
     const callout = card.querySelector(".deadline-callout");
     if (next) {
-      const label = document.createElement("span");
-      label.textContent = `下一节点 · ${next.label}`;
+      addText(callout, "", `下一节点 · ${next.label}`);
       const strong = document.createElement("strong");
       strong.textContent = `${formatDate(next.at)} · ${countdown(next.at)}`;
-      callout.append(label, strong);
+      callout.append(strong);
     } else {
       callout.classList.add("is-past");
       callout.textContent = "当前收录节点均已结束";
@@ -170,10 +190,7 @@
     });
 
     const warning = card.querySelector(".warning");
-    if (event.warning) {
-      warning.hidden = false;
-      warning.textContent = `注意：${event.warning}`;
-    }
+    if (event.warning) { warning.hidden = false; warning.textContent = `注意：${event.warning}`; }
 
     const favorite = card.querySelector(".favorite-button");
     const updateFavorite = () => {
@@ -187,7 +204,7 @@
     favorite.addEventListener("click", () => {
       state.favorites.has(event.id) ? state.favorites.delete(event.id) : state.favorites.add(event.id);
       saveFavorites();
-      if (state.favoritesOnly) render(); else updateFavorite();
+      state.favoritesOnly ? renderTimeline() : (updateFavorite(), renderPointsOnly());
     });
 
     const source = card.querySelector(".source-link");
@@ -195,14 +212,39 @@
     source.textContent = event.sourceLabel;
     card.querySelector(".calendar-button").addEventListener("click", () => downloadCalendar(event));
     card.querySelector(".verified-at").textContent = `核验于 ${event.verifiedAt} · 日期有变请以官方原文为准`;
-    return card;
+    elements.detail.replaceChildren(card);
   }
 
-  function render() {
+  function renderPointsOnly() {
     const visible = filteredEvents();
-    elements.list.replaceChildren(...visible.map(renderCard));
-    elements.count.textContent = `${visible.length} 个结果`;
+    elements.track.replaceChildren(...visible.map(renderPoint));
+  }
+
+  function renderTimeline() {
+    const visible = filteredEvents();
+    if (!visible.some((event) => event.id === state.selectedId)) state.selectedId = visible[0]?.id || null;
+    elements.track.replaceChildren(...visible.map(renderPoint));
+    elements.count.textContent = `${visible.length} 个有确切日期的赛事`;
     elements.empty.hidden = visible.length !== 0;
+    elements.scroll.parentElement.hidden = visible.length === 0;
+    renderDetail(visible.find((event) => event.id === state.selectedId));
+    const index = visible.findIndex((event) => event.id === state.selectedId);
+    elements.previous.disabled = index <= 0;
+    elements.next.disabled = index < 0 || index >= visible.length - 1;
+  }
+
+  function selectEvent(id) {
+    state.selectedId = id;
+    renderTimeline();
+    const selected = [...elements.track.children].find((node) => node.dataset.eventId === id);
+    selected?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }
+
+  function moveSelection(offset) {
+    const visible = filteredEvents();
+    const index = visible.findIndex((event) => event.id === state.selectedId);
+    const target = visible[Math.max(0, Math.min(visible.length - 1, index + offset))];
+    if (target) selectEvent(target.id);
   }
 
   function escapeIcs(value) {
@@ -216,19 +258,14 @@
   function downloadCalendar(event) {
     const stamp = toUtcIcs(new Date());
     const entries = event.milestones.map((milestone, index) => [
-      "BEGIN:VEVENT",
-      `UID:${event.id}-${index}@fzu-radar.local`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART:${toUtcIcs(milestone.at)}`,
-      `DTEND:${toUtcIcs(new Date(dateOf(milestone).getTime() + 30 * 60 * 1000))}`,
+      "BEGIN:VEVENT", `UID:${event.id}-${index}@fzu-radar.local`, `DTSTAMP:${stamp}`,
+      `DTSTART:${toUtcIcs(milestone.at)}`, `DTEND:${toUtcIcs(new Date(dateOf(milestone).getTime() + 30 * 60 * 1000))}`,
       `SUMMARY:${escapeIcs(`${event.title}｜${milestone.label}`)}`,
       `DESCRIPTION:${escapeIcs(`来源：${event.sourceLabel}\n${event.warning || "请以官方通知为准"}`)}`,
-      `URL:${event.sourceUrl}`,
-      "END:VEVENT"
+      `URL:${event.sourceUrl}`, "END:VEVENT"
     ].join("\r\n")).join("\r\n");
     const content = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//LinXiaoBa//FZU Competition Radar//ZH-CN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n${entries}\r\nEND:VCALENDAR\r\n`;
-    const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(new Blob([content], { type: "text/calendar;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
     link.download = `${event.id}.ics`;
@@ -238,28 +275,70 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function directoryMatches() {
+    const query = state.directoryQuery.trim().toLocaleLowerCase("zh-CN");
+    return recognitions.filter((item) => {
+      const haystack = [item.name, item.organizer, item.level].join(" ").toLocaleLowerCase("zh-CN");
+      return (!query || haystack.includes(query))
+        && (state.directoryLevel === "全部" || item.level === state.directoryLevel)
+        && (state.directoryType === "全部" || item.recognitionType === state.directoryType);
+    });
+  }
+
+  function renderDirectory() {
+    const matches = directoryMatches();
+    const shown = matches.slice(0, state.directoryLimit);
+    const fragment = document.createDocumentFragment();
+    shown.forEach((item) => {
+      const article = document.createElement("article");
+      article.className = "directory-item";
+      const type = item.recognitionType === "direct" ? "直接认定" : "分级认定";
+      article.innerHTML = `<div><span></span><span></span></div><h3></h3><p></p>`;
+      const labels = article.querySelectorAll("span");
+      labels[0].textContent = item.level;
+      labels[1].textContent = type;
+      article.querySelector("h3").textContent = item.name;
+      article.querySelector("p").textContent = item.organizer || "主办方见学校认定表";
+      fragment.append(article);
+    });
+    elements.directoryList.replaceChildren(fragment);
+    elements.directoryCount.textContent = `找到 ${matches.length} 项，已显示 ${shown.length} 项`;
+    elements.directoryMore.hidden = shown.length >= matches.length;
+    elements.directoryEmpty.hidden = matches.length !== 0;
+  }
+
   function renderStats() {
     const soonCount = events.flatMap((event) => event.milestones).filter((milestone) => {
       const delta = dateOf(milestone) - now;
-      return delta >= 0 && delta <= THIRTY_DAYS;
+      return delta >= 0 && delta <= 30 * DAY;
     }).length;
     const latest = events.map((event) => event.verifiedAt).sort().at(-1);
     elements.verifiedCount.textContent = String(events.length);
     elements.upcomingCount.textContent = String(soonCount);
+    elements.recognitionCount.textContent = String(recognitions.length);
     elements.latestDate.textContent = latest ? latest.slice(5).replace("-", ".") : "—";
   }
 
-  elements.search.addEventListener("input", (event) => { state.query = event.target.value; render(); });
-  elements.soonOnly.addEventListener("change", (event) => { state.soonOnly = event.target.checked; render(); });
-  elements.recognizedOnly.addEventListener("change", (event) => { state.recognizedOnly = event.target.checked; render(); });
-  elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; render(); });
+  [...new Set(recognitions.map((item) => item.level).filter(Boolean))].sort().forEach((level) => {
+    const option = document.createElement("option");
+    option.value = level;
+    option.textContent = level;
+    elements.directoryLevel.append(option);
+  });
+
+  elements.search.addEventListener("input", (event) => { state.query = event.target.value; renderTimeline(); });
+  elements.soonOnly.addEventListener("change", (event) => { state.soonOnly = event.target.checked; renderTimeline(); });
+  elements.recognizedOnly.addEventListener("change", (event) => { state.recognizedOnly = event.target.checked; renderTimeline(); });
+  elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; renderTimeline(); });
+  elements.previous.addEventListener("click", () => moveSelection(-1));
+  elements.next.addEventListener("click", () => moveSelection(1));
+  elements.directorySearch.addEventListener("input", (event) => { state.directoryQuery = event.target.value; state.directoryLimit = 18; renderDirectory(); });
+  elements.directoryLevel.addEventListener("change", (event) => { state.directoryLevel = event.target.value; state.directoryLimit = 18; renderDirectory(); });
+  elements.directoryType.addEventListener("change", (event) => { state.directoryType = event.target.value; state.directoryLimit = 18; renderDirectory(); });
+  elements.directoryMore.addEventListener("click", () => { state.directoryLimit += 18; renderDirectory(); });
 
   let installPrompt;
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    installPrompt = event;
-    elements.install.hidden = false;
-  });
+  window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); installPrompt = event; elements.install.hidden = false; });
   elements.install.addEventListener("click", async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -268,11 +347,10 @@
     elements.install.hidden = true;
   });
 
-  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
-    navigator.serviceWorker.register("./sw.js");
-  }
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js");
 
   renderCategories();
   renderStats();
-  render();
+  renderTimeline();
+  renderDirectory();
 })();

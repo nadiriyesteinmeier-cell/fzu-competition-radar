@@ -16,8 +16,11 @@ function loadWindowScript(relativePath) {
 }
 
 const eventWindow = loadWindowScript("data/events.js");
+const recognitionWindow = loadWindowScript("data/recognitions.js");
 const paperWindow = loadWindowScript("data/papers.js");
 const events = eventWindow.COMPETITION_EVENTS;
+const recognitionData = recognitionWindow.FZU_RECOGNITION_DATA;
+const recognitions = recognitionData.items;
 const papers = paperWindow.PAPER_ITEMS;
 
 assert(Array.isArray(events) && events.length > 0, "Competition data is empty");
@@ -42,6 +45,15 @@ for (const event of events) {
 const recognized = events.filter((event) => event.recognition);
 assert(recognized.length === 3, "Expected three current events matched to the FZU 2026 recognition lists");
 assert(recognized.filter((event) => event.recognition.status === "direct").length === 2, "Expected two exact direct-recognition matches");
+assert(recognitionData.year === 2026, "Recognition catalog must be the 2026 edition");
+assert(Array.isArray(recognitions) && recognitions.length === 185, "Expected 185 FZU-recognized competitions");
+assert(new Set(recognitions.map((item) => item.name)).size === recognitions.length, "Recognition names must be unique");
+assert(recognitionData.sources.find((source) => source.type === "direct")?.count === 77, "Expected 77 direct-recognition entries");
+assert(recognitionData.sources.find((source) => source.type === "classified")?.count === 108, "Expected 108 classified entries");
+for (const item of recognitions) {
+  assert(item.name && item.level, "Recognition entry is incomplete");
+  assert(["direct", "classified"].includes(item.recognitionType), `${item.name}: invalid recognition type`);
+}
 const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
 assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
 
@@ -78,4 +90,4 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
