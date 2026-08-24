@@ -104,16 +104,30 @@ main { max-width: 1120px; margin: auto; padding: 0 20px 70px; }
 .paper-calendar-head h2 { margin: 0; font-size: 25px; letter-spacing: -.035em; }
 .paper-calendar-head span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .paper-calendar-head > div:last-child { display: flex; gap: 6px; }
-.paper-calendar-head button { width: 36px; height: 34px; color: var(--ink); background: #f3f4f1; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+.paper-calendar-head button { min-width: 36px; height: 34px; padding: 0 10px; color: var(--ink); background: #f3f4f1; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
 .paper-calendar-head button:disabled { opacity: .3; cursor: default; }
-.paper-date-index { display: grid; grid-template-columns: repeat(8, 82px); gap: 7px; margin-top: 16px; overflow-x: auto; scroll-snap-type: x proximity; }
-.paper-day { display: flex; width: 82px; min-height: 78px; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 11px; color: var(--ink); background: #f5f5f3; border: 1px solid transparent; border-radius: 12px; scroll-snap-align: start; cursor: pointer; }
-.paper-day small { color: #858b81; font-size: 9px; }
-.paper-day b { font-size: 14px; }
-.paper-day span { color: var(--muted); font-size: 10px; }
+.paper-date-all[aria-pressed="true"] { color: white; background: var(--ink); }
+.paper-weekdays, .paper-date-index { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+.paper-weekdays { margin-top: 16px; padding-inline: 3px; color: #90958d; font-size: 9px; text-align: center; }
+.paper-date-index { margin-top: 7px; }
+.paper-day { display: flex; min-height: 66px; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 9px 10px; color: var(--ink); background: #f5f5f3; border: 1px solid transparent; border-radius: 11px; cursor: pointer; }
+.paper-day b { font-size: 13px; }
+.paper-day span { color: var(--muted); font-size: 9px; }
 .paper-day[aria-pressed="true"] { color: white; background: var(--ink); border-color: var(--ink); }
-.paper-day[aria-pressed="true"] small, .paper-day[aria-pressed="true"] span { color: #c4cbc0; }
+.paper-day[aria-pressed="true"] span { color: #c4cbc0; }
 .paper-day[data-count="0"] { opacity: .55; }
+.paper-day.is-outside-month { color: #a8ada5; background: #fafaf8; }
+.paper-list { grid-template-columns: 1fr; gap: 9px; }
+.paper-card { display: grid; grid-template-columns: minmax(0, 1fr) 220px; grid-template-areas: "top actions" "title actions" "authors actions" "date actions" "abstract abstract" "status status"; gap: 4px 20px; padding: 17px 19px; border-radius: 15px; box-shadow: none; }
+.paper-card .card-top { grid-area: top; }
+.paper-card h3 { grid-area: title; margin: 5px 0 3px; font-size: 17px; line-height: 1.35; }
+.paper-card .paper-authors { grid-area: authors; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.paper-card .paper-date { grid-area: date; margin: 3px 0; font-size: 10px; }
+.paper-card details { grid-area: abstract; margin-top: 8px; }
+.paper-card .card-actions { grid-area: actions; align-self: center; margin: 0; }
+.paper-card .copy-status { grid-area: status; }
+.paper-card .badge { padding: 4px 7px; font-size: 9px; }
+.paper-card .favorite-button { font-size: 22px; }
 .paper-card { padding: 24px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 9px 30px rgba(28, 35, 23, .045); }
 .paper-card h3 { margin: 19px 0 10px; font-size: 21px; line-height: 1.38; letter-spacing: -.018em; }
 .paper-authors { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
@@ -522,5 +536,15 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .radar-hero .stats strong { font-size: 22px; }
   .radar-hero .stats span { font-size: 9px; }
   .event-detail-card .card-actions { flex-direction: column; }
+  .paper-calendar { padding: 14px 10px; }
+  .paper-calendar-head { align-items: flex-start; flex-direction: column; }
+  .paper-calendar-head > div:last-child { width: 100%; }
+  .paper-calendar-head .paper-date-all { margin-right: auto; }
+  .paper-weekdays, .paper-date-index { gap: 4px; }
+  .paper-day { min-height: 56px; padding: 7px 6px; border-radius: 8px; }
+  .paper-day b { font-size: 11px; }
+  .paper-day span { font-size: 8px; }
+  .paper-card { grid-template-columns: 1fr; grid-template-areas: "top" "title" "authors" "date" "abstract" "actions" "status"; gap: 4px; padding: 15px; }
+  .paper-card .card-actions { margin-top: 9px; }
 }
 

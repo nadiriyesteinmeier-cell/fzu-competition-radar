@@ -5,7 +5,7 @@
   const labels = { "cs.CV": "计算机视觉", "cs.AI": "人工智能", "cs.HC": "人机交互" };
   const favoriteKey = "student-radar-paper-favorites-v1";
   const latestPaperDate = papers.length ? new Date(Math.max(...papers.map((paper) => Date.parse(paper.published)))) : new Date();
-  const state = { category: "全部", query: "", favoritesOnly: false, date: "全部", weekOffset: 0, favorites: loadFavorites(), limit: 12 };
+  const state = { category: "全部", query: "", favoritesOnly: false, date: "全部", monthOffset: 0, favorites: loadFavorites(), limit: 12 };
   const elements = {
     list: document.querySelector("#paper-list"),
     template: document.querySelector("#paper-template"),
@@ -21,7 +21,8 @@
     dateIndex: document.querySelector("#paper-date-index"),
     weekLabel: document.querySelector("#paper-week-label"),
     weekPrev: document.querySelector("#paper-week-prev"),
-    weekNext: document.querySelector("#paper-week-next")
+    weekNext: document.querySelector("#paper-week-next"),
+    dateAll: document.querySelector("#paper-date-all")
   };
 
   function loadFavorites() {
@@ -40,31 +41,27 @@
   function dateKey(value) { return new Date(value).toISOString().slice(0, 10); }
 
   function renderDateIndex() {
-    const end = new Date(latestPaperDate);
-    end.setUTCHours(0, 0, 0, 0);
-    end.setUTCDate(end.getUTCDate() + state.weekOffset * 7);
-    const days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(end); date.setUTCDate(end.getUTCDate() - (6 - index)); return date;
-    });
-    elements.weekLabel.textContent = `${days[0].toISOString().slice(5, 10).replace("-", ".")}—${days[6].toISOString().slice(5, 10).replace("-", ".")}`;
-    elements.weekNext.disabled = state.weekOffset >= 0;
-    const all = document.createElement("button");
-    all.type = "button"; all.className = "paper-day paper-day-all"; all.innerHTML = `<b>全部</b><span>${papers.length}篇</span>`;
-    all.setAttribute("aria-pressed", String(state.date === "全部"));
-    all.addEventListener("click", () => { state.date = "全部"; state.limit = 12; renderDateIndex(); render(); });
+    const month = new Date(Date.UTC(latestPaperDate.getUTCFullYear(), latestPaperDate.getUTCMonth() + state.monthOffset, 1));
+    const mondayOffset = (month.getUTCDay() + 6) % 7;
+    const gridStart = new Date(month); gridStart.setUTCDate(1 - mondayOffset);
+    const days = Array.from({ length: 42 }, (_, index) => { const date = new Date(gridStart); date.setUTCDate(gridStart.getUTCDate() + index); return date; });
+    elements.weekLabel.textContent = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", timeZone: "UTC" }).format(month);
+    elements.weekNext.disabled = state.monthOffset >= 0;
+    elements.dateAll.textContent = `全部 ${papers.length}篇`;
+    elements.dateAll.setAttribute("aria-pressed", String(state.date === "全部"));
     const buttons = days.map((day) => {
       const key = day.toISOString().slice(0, 10);
       const count = papers.filter((paper) => dateKey(paper.published) === key).length;
       const button = document.createElement("button");
       button.type = "button"; button.className = "paper-day"; button.dataset.count = String(count);
-      button.innerHTML = `<small></small><b></b><span></span>`;
-      button.querySelector("small").textContent = new Intl.DateTimeFormat("zh-CN", { weekday: "short", timeZone: "UTC" }).format(day);
-      button.querySelector("b").textContent = key.slice(5).replace("-", "/"); button.querySelector("span").textContent = `${count}篇`;
+      if (day.getUTCMonth() !== month.getUTCMonth()) button.classList.add("is-outside-month");
+      button.innerHTML = `<b></b><span></span>`;
+      button.querySelector("b").textContent = String(day.getUTCDate()); button.querySelector("span").textContent = `${count}篇`;
       button.setAttribute("aria-pressed", String(state.date === key));
       button.addEventListener("click", () => { state.date = key; state.limit = 12; renderDateIndex(); render(); });
       return button;
     });
-    elements.dateIndex.replaceChildren(all, ...buttons);
+    elements.dateIndex.replaceChildren(...buttons);
   }
 
   function displayCategories(paper) {
@@ -165,8 +162,9 @@
   elements.search.addEventListener("input", (event) => { state.query = event.target.value; state.limit = 12; render(); });
   elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; state.limit = 12; render(); });
   elements.loadMore.addEventListener("click", () => { state.limit += 12; render(); });
-  elements.weekPrev.addEventListener("click", () => { state.weekOffset -= 1; renderDateIndex(); });
-  elements.weekNext.addEventListener("click", () => { if (state.weekOffset < 0) { state.weekOffset += 1; renderDateIndex(); } });
+  elements.dateAll.addEventListener("click", () => { state.date = "全部"; state.limit = 12; renderDateIndex(); render(); });
+  elements.weekPrev.addEventListener("click", () => { state.monthOffset -= 1; renderDateIndex(); });
+  elements.weekNext.addEventListener("click", () => { if (state.monthOffset < 0) { state.monthOffset += 1; renderDateIndex(); } });
   elements.total.textContent = String(papers.length);
   elements.categoryCount.textContent = String(Object.keys(labels).length);
   const updated = window.PAPER_DATA_UPDATED_AT;
