@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#11150f">
-  <meta name="description" content="学生雷达本地院校档案：学校、专业和年级仅保存在当前浏览器。">
+  <meta name="description" content="学生雷达个人中心：集中管理竞赛专注、论文精读、四六级估分和本地院校档案。">
   <link rel="canonical" href="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/profile.html">
-  <title>我的院校档案｜学生雷达</title>
+  <title>我的学生空间｜学生雷达</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -19,10 +19,28 @@
 
   <main>
     <section class="hero profile-hero">
-      <p class="eyebrow">LOCAL STUDENT PROFILE</p>
-      <h1>先做本地档案<br><em>暂不做虚假认证</em></h1>
-      <p>这些信息只用于个性化推荐，并只保存在当前浏览器。选择福州大学不等于完成学校认证。</p>
+      <p class="eyebrow">MY STUDENT RADAR</p>
+      <h1><span id="profile-greeting">林小八</span>的<br><em>学生空间</em></h1>
+      <p>竞赛准备、论文精读和四六级估分集中在这里。当前记录只保存在这台设备。</p>
       <div class="privacy-pill">不需要账号 · 不上传 · 可随时清除</div>
+    </section>
+
+    <section class="profile-dashboard" aria-label="我的数据概览">
+      <div class="profile-stat"><strong id="stat-focus">0</strong><span>竞赛专注</span></div>
+      <div class="profile-stat"><strong id="stat-paper-orders">0</strong><span>论文精读</span></div>
+      <div class="profile-stat"><strong id="stat-cet">0</strong><span>估分记录</span></div>
+      <div class="profile-stat"><strong id="stat-favorites">0</strong><span>全部收藏</span></div>
+    </section>
+
+    <section class="workspace-section">
+      <div class="section-head"><div><p class="eyebrow">MY WORKSPACE</p><h2>最近活动</h2></div><button id="clear-activity" class="workspace-clear" type="button">清除活动记录</button></div>
+      <div class="workspace-grid">
+        <article class="workspace-card workspace-focus"><div class="workspace-card-head"><div><span>竞赛</span><h3>专注中的比赛</h3></div><a href="index.html">查看竞赛 →</a></div><div id="profile-focus-list" class="workspace-list"></div><p id="profile-focus-empty" class="workspace-empty">还没有开启竞赛专注或完成任务。</p></article>
+        <article class="workspace-card"><div class="workspace-card-head"><div><span>论文</span><h3>最近精读</h3></div><a href="paper-analysis.html#my-reading">全部记录 →</a></div><div id="profile-paper-list" class="workspace-list"></div><p id="profile-paper-empty" class="workspace-empty">还没有论文精读记录。</p></article>
+        <article class="workspace-card"><div class="workspace-card-head"><div><span>四六级</span><h3>估分历史</h3></div><a href="cet.html">重新估分 →</a></div><div id="profile-cet-list" class="workspace-list"></div><p id="profile-cet-empty" class="workspace-empty">还没有本机估分记录。</p></article>
+        <article class="workspace-card workspace-collection"><div class="workspace-card-head"><div><span>收藏</span><h3>稍后再看</h3></div></div><div class="collection-links"><a href="index.html"><strong id="competition-favorite-count">0</strong><span>项竞赛收藏</span></a><a href="papers.html"><strong id="paper-favorite-count">0</strong><span>篇论文收藏</span></a></div></article>
+      </div>
+      <p id="workspace-status" class="copy-status" aria-live="polite"></p>
     </section>
 
     <div class="profile-layout">
@@ -61,6 +79,8 @@
   </main>
 
   <footer><span>林小八制作 · 档案仅保存在当前设备</span><span><a href="index.html">竞赛</a> · <a href="pro.html">Pro简读</a> · <a href="privacy.html">隐私</a></span></footer>
+  <script src="data/events.js"></script>
   <script src="profile.js"></script>
 </body>
 </html>
+
