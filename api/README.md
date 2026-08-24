@@ -34,3 +34,5 @@ npm start
 
 `Dockerfile` 可用于部署到支持容器的服务；生产容器默认关闭模拟支付。完整上线门槛见 `DEPLOYMENT.md`，安全边界见 `SECURITY.md`。
 
+Web 内测的逐项部署步骤见 `DEPLOY-RAILWAY.md`；微信小程序阶段的数据库与身份迁移见 `CLOUDBASE-MIGRATION.md`。服务会优先读取 `API_PORT`，未设置时读取云平台注入的 `PORT`。
+

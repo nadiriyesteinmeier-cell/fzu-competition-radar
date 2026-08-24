@@ -7,7 +7,7 @@ import crypto from "node:crypto";
 const port = 8899;
 const base = `http://127.0.0.1:${port}`;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "student-radar-api-test-"));
-const child = spawn(process.execPath, ["server.mjs"], { cwd: new URL(".", import.meta.url), env: { ...process.env, API_PORT: String(port), DATA_DIR: dataDir, OPENAI_API_KEY: "test-only", AI_MOCK_MODE: "true", ENABLE_MOCK_PAYMENT: "true" }, stdio: ["ignore", "pipe", "pipe"] });
+const child = spawn(process.execPath, ["server.mjs"], { cwd: new URL(".", import.meta.url), env: { ...process.env, API_PORT: "", PORT: String(port), DATA_DIR: dataDir, OPENAI_API_KEY: "", SKIP_LOCAL_ENV: "true", AI_MOCK_MODE: "true", ENABLE_MOCK_PAYMENT: "true" }, stdio: ["ignore", "pipe", "pipe"] });
 let stderr = ""; child.stderr.on("data", (chunk) => { stderr += chunk; });
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
@@ -18,7 +18,7 @@ async function waitForServer() {
 }
 
 try {
-  const health = await waitForServer(); assert(health.aiMode === "mock" && health.paymentMode === "mock", "Unexpected test modes");
+  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock", "Unexpected test modes");
   const productResult = await request("/api/products"); assert(productResult.value.products.length === 4, "Expected four products");
   const invalid = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); assert(invalid.response.status === 400, "Invalid order guard failed");
   const clientId = crypto.randomUUID();

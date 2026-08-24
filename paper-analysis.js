@@ -113,12 +113,12 @@
   async function checkApi() {
     if (!apiBase) { elements.checkoutStatus.textContent = "线上后端尚未部署；当前使用演示模式。"; return; }
     try {
-      const response = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(1800) }); const value = await response.json(); apiAvailable = response.ok && value.keyConfigured;
+      const response = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(1800) }); const value = await response.json(); apiAvailable = response.ok && value.aiReady;
       if (!apiAvailable) throw new Error();
       const productResponse = await fetch(`${apiBase}/api/products`); const catalog = await productResponse.json();
       if (productResponse.ok) catalog.products.forEach((serverProduct) => { const local = products.find((item) => item.id === serverProduct.id); if (local) { local.price = String(serverProduct.priceFen / 100); local.name = serverProduct.name; } });
       renderProducts(); renderCheckout(); const synced = await syncOrderHistory();
-      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `模型 ${value.model} · ${value.paymentMode === "mock" ? "本地模拟支付" : "等待支付回调"} · 已同步 ${synced} 个设备订单`;
+      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `${value.aiMode === "mock" ? "无费用模拟AI" : `模型 ${value.model}`} · ${value.paymentMode === "mock" ? "模拟支付" : "等待支付回调"} · 已同步 ${synced} 个设备订单`;
     } catch (_) { elements.checkoutStatus.textContent = "本地AI服务未启动；当前使用演示模式。"; }
   }
   async function unlock() {

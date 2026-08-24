@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const workspace = path.resolve(here, "..");
-loadEnv(path.join(workspace, ".env.local"));
+if (!booleanEnv("SKIP_LOCAL_ENV", false)) loadEnv(path.join(workspace, ".env.local"));
 const apiHost = /^(?:127\.0\.0\.1|0\.0\.0\.0|localhost)$/.test(process.env.API_HOST || "") ? process.env.API_HOST : "127.0.0.1";
 
 const config = {
-  port: integerEnv("API_PORT", 8787, 1, 65535),
+  port: process.env.API_PORT ? integerEnv("API_PORT", 8787, 1, 65535) : integerEnv("PORT", 8787, 1, 65535),
   host: apiHost,
   model: process.env.OPENAI_MODEL || "gpt-5-mini",
   dailyLimit: integerEnv("DAILY_REQUEST_LIMIT", 20, 1, 500),
@@ -174,7 +174,7 @@ const server = http.createServer(async (req, res) => {
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
   if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-allow-headers": "content-type", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "device" }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "device", storageMode: "file" }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
     if (req.method === "GET" && url.pathname === "/api/orders") return json(res, 200, { orders: listOrders(url.searchParams.get("clientId")), identityMode: "device" }, origin);
     if (req.method === "POST" && url.pathname === "/api/orders") return json(res, 201, { order: publicOrder(createOrder(await body(req))) }, origin);

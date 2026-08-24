@@ -18,6 +18,8 @@
 
 连接后端后，论文页会自动同步当前匿名设备最近 30 个订单；即使本地精读列表被清掉，也能在同一浏览器恢复。该设备标识不是账号，暂不支持跨浏览器或跨设备同步。未来部署云端只需在公开的 `config.js` 填写 HTTPS API 地址，密钥仍只放在后端。
 
+部署采用两阶段路线：Railway 持久化 Volume 用于 10—30 人 Web 内测，先开启无费用模拟 AI 和模拟支付；确认需求后再迁移腾讯 CloudBase 数据库与微信身份。托管选择依据见仓库根目录 `HOSTING-DECISION-2026-08-24.md`，逐项操作见 `api/DEPLOY-RAILWAY.md`。
+
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
