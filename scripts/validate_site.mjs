@@ -17,10 +17,12 @@ function loadWindowScript(relativePath) {
 
 const eventWindow = loadWindowScript("data/events.js");
 const recognitionWindow = loadWindowScript("data/recognitions.js");
+const proWindow = loadWindowScript("data/pro-briefs.js");
 const paperWindow = loadWindowScript("data/papers.js");
 const events = eventWindow.COMPETITION_EVENTS;
 const recognitionData = recognitionWindow.FZU_RECOGNITION_DATA;
 const recognitions = recognitionData.items;
+const proBriefs = proWindow.PRO_BRIEFS;
 const papers = paperWindow.PAPER_ITEMS;
 
 assert(Array.isArray(events) && events.length > 0, "Competition data is empty");
@@ -53,6 +55,12 @@ assert(recognitionData.sources.find((source) => source.type === "classified")?.c
 for (const item of recognitions) {
   assert(item.name && item.level, "Recognition entry is incomplete");
   assert(["direct", "classified"].includes(item.recognitionType), `${item.name}: invalid recognition type`);
+}
+assert(Array.isArray(proBriefs) && proBriefs.length === 3, "Expected three Pro briefs");
+assert(new Set(proBriefs.map((item) => item.id)).size === proBriefs.length, "Pro brief IDs must be unique");
+for (const brief of proBriefs) {
+  assert(brief.title && brief.summary && /^https:\/\//.test(brief.sourceUrl), `${brief.id}: incomplete Pro brief`);
+  assert(brief.actions.length === 3 && brief.directions.length === 3 && brief.sprint.length === 4, `${brief.id}: invalid Pro brief structure`);
 }
 const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
 assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
@@ -90,4 +98,4 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, proBriefs: proBriefs.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
