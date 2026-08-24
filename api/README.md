@@ -36,3 +36,4 @@ npm start
 
 Web 内测的逐项部署步骤见 `DEPLOY-RAILWAY.md`；微信小程序阶段的数据库与身份迁移见 `CLOUDBASE-MIGRATION.md`。服务会优先读取 `API_PORT`，未设置时读取云平台注入的 `PORT`。
 
+Railway Volume 挂载到 `/app/data` 时，容器入口会先修正挂载目录权限，再降权为 `node` 用户启动服务；部署日志应出现 `docker-entrypoint.sh` 与 `su-exec`。
