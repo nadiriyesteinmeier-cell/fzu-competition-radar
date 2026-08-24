@@ -235,6 +235,8 @@
     source.href = event.sourceUrl;
     source.textContent = event.sourceLabel;
     const calendarButton = card.querySelector(".calendar-button");
+    const focusButton = card.querySelector(".focus-card-link");
+    focusButton.hidden = event.id !== "cumcm-2026";
     if (event.isForecast) {
       calendarButton.textContent = "预测日期不可导入";
       calendarButton.disabled = true;

@@ -30,17 +30,16 @@
   </header>
 
   <main>
-    <section class="hero">
-      <p class="eyebrow">FZU COMPETITION RADAR</p>
-      <h1>别再错过<br><em>报名与交稿时间</em></h1>
-      <p>只整理公开通知，保留原文链接与核验时间。平台不是赛事官方，最终安排以主办方和福州大学最新通知为准。</p>
-      <div class="hero-share-row"><button type="button" data-share data-share-title="福大竞赛雷达" data-share-text="报名、比赛和交稿节点可以直接加入日历。">分享给同学</button><span aria-live="polite"></span></div>
+    <section class="hero radar-hero">
+      <h1>竞赛雷达</h1>
+      <p>近期节点、福大认定、官方原文。</p>
       <div class="stats stats-four" aria-label="数据概览">
         <div><strong id="verified-count">0</strong><span>已核验赛事</span></div>
         <div><strong id="upcoming-count">0</strong><span>30天内节点</span></div>
         <div><strong id="recognition-count">0</strong><span>福大认定目录</span></div>
-        <div><strong id="latest-date">—</strong><span>最近核验</span></div>
       </div>
+      <span id="latest-date" hidden>—</span>
+      <div class="hero-share-row"><button type="button" data-share data-share-title="福大竞赛雷达" data-share-text="报名、比赛和交稿节点可以直接加入日历。">分享</button><span aria-live="polite"></span></div>
     </section>
 
     <section class="controls" aria-label="筛选竞赛">
@@ -153,6 +152,7 @@
       <div class="card-actions">
         <a class="source-link" target="_blank" rel="noopener noreferrer">查看官方原文</a>
         <button class="calendar-button" type="button">加入日历</button>
+        <a class="focus-card-link" href="focus.html" hidden>进入专注模式</a>
       </div>
       <small class="verified-at"></small>
     </article>

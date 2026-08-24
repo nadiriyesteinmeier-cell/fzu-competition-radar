@@ -360,7 +360,6 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .premium-items b { position: absolute; z-index: 1; right: 13px; bottom: 12px; color: #c6cec0; font-size: 9px; }
 .premium-policy { margin: 16px 0 0; color: #929b8e; font-size: 10px; line-height: 1.7; }
 .premium-unlock { display: flex; margin-top: 14px; min-height: 45px; align-items: center; justify-content: center; color: var(--ink); background: var(--lime); border-radius: 10px; font-size: 12px; font-weight: 900; text-decoration: none; }
-.focus-mode-link { display: flex; justify-content: space-between; margin-top: 14px; padding: 16px; color: var(--lime); background: var(--ink); border: 1px solid #35412e; border-radius: 10px; font-weight: 900; text-decoration: none; }
 
 .profile-layout { display: grid; grid-template-columns: 1fr .82fr; gap: 16px; align-items: start; }
 .profile-layout .estimator-card input { width: 100%; min-height: 48px; padding: 10px 12px; }
@@ -470,6 +469,26 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .reminder-form select { min-width: 150px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: white; }
 .calendar-button.secondary { color: var(--ink); background: white; border: 1px solid var(--ink); }
 
+/* Home hierarchy: quiet, product-like, and focused on the timeline. */
+.radar-hero { min-height: 0; padding: clamp(28px, 5vw, 52px); color: var(--ink); background: #fff; border: 1px solid #e2e4de; border-radius: 28px; box-shadow: 0 18px 55px rgba(20, 24, 18, .045); }
+.radar-hero::after { display: none; }
+.radar-hero h1 { max-width: none; color: var(--ink); font-size: clamp(42px, 6vw, 66px); line-height: 1; letter-spacing: -.055em; }
+.radar-hero > p:not(.eyebrow) { margin-top: 14px; color: #70756d; font-size: 16px; line-height: 1.5; }
+.radar-hero .stats-four { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 580px; margin-top: 30px; gap: 12px; background: transparent; border: 0; }
+.radar-hero .stats div { padding: 15px 16px; background: #f5f5f3; border-radius: 14px; }
+.radar-hero .stats strong { color: var(--ink); font-size: 25px; }
+.radar-hero .stats span { margin-top: 5px; color: #787d75; font-size: 11px; }
+.radar-hero .hero-share-row { margin-top: 16px; }
+.radar-hero .hero-share-row button { padding: 0; color: #656b62; background: transparent; border: 0; border-radius: 0; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.radar-hero .hero-share-row button:hover { color: var(--ink); }
+.event-detail-card .badge { color: #555b55; background: #f0f1ee; }
+.event-detail-card .badge-category, .event-detail-card .badge-verified, .event-detail-card .badge-recognized, .event-detail-card .popularity-a, .event-detail-card .popularity-b { color: #4f554d; background: #eceee9; }
+.event-detail-card .deadline-callout { color: #737872; background: #f4f5f2; border: 1px solid #e3e5df; }
+.event-detail-card .deadline-callout strong { color: var(--ink); }
+.event-detail-card .calendar-button { color: var(--ink); background: #eceee9; border: 1px solid #dde0d9; }
+.focus-card-link { color: white; background: #1677ff; border: 1px solid #1677ff; text-decoration: none; }
+.focus-card-link[hidden] { display: none; }
+
 @media (max-width: 760px) {
   .long-range-watch { align-items: stretch; flex-direction: column; }
   .watch-actions { width: 100%; flex-basis: auto; }
@@ -481,5 +500,12 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .deep-read-actions { align-items: flex-start; flex-direction: column; }
   .focus-countdown { grid-template-columns: 1fr; }
   .focus-countdown div + div { border-top: 1px solid #35412e; border-left: 0; }
+  .radar-hero { padding: 28px 22px; border-radius: 22px; }
+  .radar-hero h1 { font-size: 42px; }
+  .radar-hero .stats-four { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 24px; }
+  .radar-hero .stats div { padding: 12px 9px; }
+  .radar-hero .stats strong { font-size: 22px; }
+  .radar-hero .stats span { font-size: 9px; }
+  .event-detail-card .card-actions { flex-direction: column; }
 }
 

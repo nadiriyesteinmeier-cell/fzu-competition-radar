@@ -22,7 +22,6 @@
     warning: document.querySelector("#brief-warning"),
     premiumItems: document.querySelector("#premium-items"),
     premiumEmail: document.querySelector("#premium-email"),
-    focusMode: document.querySelector("#focus-mode-link"),
     source: document.querySelector("#brief-source"),
     sourceNote: document.querySelector("#brief-source-note"),
     interest: document.querySelector("#interest-result"),
@@ -127,7 +126,6 @@
       return item;
     });
     const premiumBody = `申请学生雷达Pro免费内测\n竞赛：${brief.title}\n希望体验：优秀作品拆解 / 经验复盘 / 原创模板\n备注：当前不产生付款。`;
-    elements.focusMode.hidden = brief.id !== "cumcm-2026";
     elements.premiumEmail.href = `mailto:792629666@qq.com?subject=${encodeURIComponent("申请学生雷达Pro免费内测")}&body=${encodeURIComponent(premiumBody)}`;
     elements.source.href = brief.sourceUrl;
     elements.source.textContent = `${brief.sourceLabel} →`;
