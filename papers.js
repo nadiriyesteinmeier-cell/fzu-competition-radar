@@ -4,7 +4,8 @@
   const papers = Array.isArray(window.PAPER_ITEMS) ? window.PAPER_ITEMS : [];
   const labels = { "cs.CV": "计算机视觉", "cs.AI": "人工智能", "cs.HC": "人机交互" };
   const favoriteKey = "student-radar-paper-favorites-v1";
-  const state = { category: "全部", query: "", favoritesOnly: false, favorites: loadFavorites(), limit: 12 };
+  const latestPaperDate = papers.length ? new Date(Math.max(...papers.map((paper) => Date.parse(paper.published)))) : new Date();
+  const state = { category: "全部", query: "", favoritesOnly: false, date: "全部", weekOffset: 0, favorites: loadFavorites(), limit: 12 };
   const elements = {
     list: document.querySelector("#paper-list"),
     template: document.querySelector("#paper-template"),
@@ -16,7 +17,11 @@
     total: document.querySelector("#paper-count"),
     categoryCount: document.querySelector("#paper-category-count"),
     updatedAt: document.querySelector("#paper-updated-at"),
-    loadMore: document.querySelector("#paper-load-more")
+    loadMore: document.querySelector("#paper-load-more"),
+    dateIndex: document.querySelector("#paper-date-index"),
+    weekLabel: document.querySelector("#paper-week-label"),
+    weekPrev: document.querySelector("#paper-week-prev"),
+    weekNext: document.querySelector("#paper-week-next")
   };
 
   function loadFavorites() {
@@ -30,6 +35,36 @@
 
   function formatDate(value) {
     return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
+  }
+
+  function dateKey(value) { return new Date(value).toISOString().slice(0, 10); }
+
+  function renderDateIndex() {
+    const end = new Date(latestPaperDate);
+    end.setUTCHours(0, 0, 0, 0);
+    end.setUTCDate(end.getUTCDate() + state.weekOffset * 7);
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(end); date.setUTCDate(end.getUTCDate() - (6 - index)); return date;
+    });
+    elements.weekLabel.textContent = `${days[0].toISOString().slice(5, 10).replace("-", ".")}—${days[6].toISOString().slice(5, 10).replace("-", ".")}`;
+    elements.weekNext.disabled = state.weekOffset >= 0;
+    const all = document.createElement("button");
+    all.type = "button"; all.className = "paper-day paper-day-all"; all.innerHTML = `<b>全部</b><span>${papers.length}篇</span>`;
+    all.setAttribute("aria-pressed", String(state.date === "全部"));
+    all.addEventListener("click", () => { state.date = "全部"; state.limit = 12; renderDateIndex(); render(); });
+    const buttons = days.map((day) => {
+      const key = day.toISOString().slice(0, 10);
+      const count = papers.filter((paper) => dateKey(paper.published) === key).length;
+      const button = document.createElement("button");
+      button.type = "button"; button.className = "paper-day"; button.dataset.count = String(count);
+      button.innerHTML = `<small></small><b></b><span></span>`;
+      button.querySelector("small").textContent = new Intl.DateTimeFormat("zh-CN", { weekday: "short", timeZone: "UTC" }).format(day);
+      button.querySelector("b").textContent = key.slice(5).replace("-", "/"); button.querySelector("span").textContent = `${count}篇`;
+      button.setAttribute("aria-pressed", String(state.date === key));
+      button.addEventListener("click", () => { state.date = key; state.limit = 12; renderDateIndex(); render(); });
+      return button;
+    });
+    elements.dateIndex.replaceChildren(all, ...buttons);
   }
 
   function displayCategories(paper) {
@@ -60,6 +95,7 @@
       const haystack = [paper.title, paper.abstract, ...paper.authors].join(" ").toLocaleLowerCase();
       return (state.category === "全部" || paper.categories.includes(state.category))
         && (!query || haystack.includes(query))
+        && (state.date === "全部" || dateKey(paper.published) === state.date)
         && (!state.favoritesOnly || state.favorites.has(paper.id));
     });
   }
@@ -129,12 +165,16 @@
   elements.search.addEventListener("input", (event) => { state.query = event.target.value; state.limit = 12; render(); });
   elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; state.limit = 12; render(); });
   elements.loadMore.addEventListener("click", () => { state.limit += 12; render(); });
+  elements.weekPrev.addEventListener("click", () => { state.weekOffset -= 1; renderDateIndex(); });
+  elements.weekNext.addEventListener("click", () => { if (state.weekOffset < 0) { state.weekOffset += 1; renderDateIndex(); } });
   elements.total.textContent = String(papers.length);
   elements.categoryCount.textContent = String(Object.keys(labels).length);
   const updated = window.PAPER_DATA_UPDATED_AT;
   elements.updatedAt.textContent = updated ? updated.slice(5, 10).replace("-", ".") : "—";
   renderFilters();
+  renderDateIndex();
   render();
 
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js");
 })();
+

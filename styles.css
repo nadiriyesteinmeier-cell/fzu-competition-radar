@@ -99,6 +99,21 @@ main { max-width: 1120px; margin: auto; padding: 0 20px 70px; }
 
 .paper-hero::after { border-radius: 18%; transform: rotate(17deg); }
 .paper-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.paper-calendar { margin: 16px 0; padding: 20px; background: white; border: 1px solid var(--line); border-radius: var(--radius); }
+.paper-calendar-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.paper-calendar-head h2 { margin: 0; font-size: 25px; letter-spacing: -.035em; }
+.paper-calendar-head span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+.paper-calendar-head > div:last-child { display: flex; gap: 6px; }
+.paper-calendar-head button { width: 36px; height: 34px; color: var(--ink); background: #f3f4f1; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+.paper-calendar-head button:disabled { opacity: .3; cursor: default; }
+.paper-date-index { display: grid; grid-template-columns: repeat(8, 82px); gap: 7px; margin-top: 16px; overflow-x: auto; scroll-snap-type: x proximity; }
+.paper-day { display: flex; width: 82px; min-height: 78px; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 11px; color: var(--ink); background: #f5f5f3; border: 1px solid transparent; border-radius: 12px; scroll-snap-align: start; cursor: pointer; }
+.paper-day small { color: #858b81; font-size: 9px; }
+.paper-day b { font-size: 14px; }
+.paper-day span { color: var(--muted); font-size: 10px; }
+.paper-day[aria-pressed="true"] { color: white; background: var(--ink); border-color: var(--ink); }
+.paper-day[aria-pressed="true"] small, .paper-day[aria-pressed="true"] span { color: #c4cbc0; }
+.paper-day[data-count="0"] { opacity: .55; }
 .paper-card { padding: 24px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 9px 30px rgba(28, 35, 23, .045); }
 .paper-card h3 { margin: 19px 0 10px; font-size: 21px; line-height: 1.38; letter-spacing: -.018em; }
 .paper-authors { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }

@@ -20,13 +20,13 @@
   </header>
   <main>
     <section class="hero focus-hero">
-      <p class="eyebrow">FOCUS MODE · CUMCM 2026</p>
-      <h1>只盯一场比赛<br><em>把每一天用在刀刃上</em></h1>
-      <p>数模国赛短期备赛工作台：公开优秀论文入口、原创精读、训练进度与提醒偏好集中在一个页面。</p>
-      <div class="focus-countdown"><div><span id="countdown-value">计算中</span><small id="countdown-label">距离比赛开始</small></div><div><span>09.10—09.13</span><small>官方竞赛时间</small></div></div>
+      <p id="focus-eyebrow" class="eyebrow">FOCUS MODE</p>
+      <h1 id="focus-heading">专注一场比赛<br><em>把节点变成行动</em></h1>
+      <p id="focus-intro">竞赛节点、行动清单、资料入口与提醒偏好集中在一个页面。</p>
+      <div class="focus-countdown"><div><span id="countdown-value">计算中</span><small id="countdown-label">距离下一节点</small></div><div><span id="focus-range">—</span><small>官方时间范围</small></div></div>
     </section>
 
-    <nav class="focus-jumps" aria-label="专注模式目录"><a href="#today">今日任务</a><a href="#papers">优秀论文</a><a href="#deep-read">精读样章</a><a href="#reminders">提醒设置</a></nav>
+    <nav class="focus-jumps" aria-label="专注模式目录"><a href="#today">行动清单</a><a href="#papers">资料索引</a><a id="deep-read-jump" href="#deep-read">精读样章</a><a href="#reminders">提醒设置</a></nav>
 
     <section id="today" class="focus-section">
       <div class="section-head"><div><p class="eyebrow">TODAY & PROGRESS</p><h2>备赛进度</h2></div><span id="progress-text" class="result-count">0/6</span></div>
@@ -37,8 +37,8 @@
     </section>
 
     <section id="papers" class="focus-section">
-      <div class="section-head"><div><p class="eyebrow">OFFICIAL PAPER LIBRARY</p><h2>往届优秀论文入口</h2></div><a id="archive-link" class="source-link" target="_blank" rel="noopener noreferrer">2012—2025官方归档 →</a></div>
-      <p class="section-intro">论文仍在组委会指定展示网站阅读；本站只做索引、阅读顺序和原创笔记，不重新托管或售卖全文。</p>
+      <div class="section-head"><div><p id="resource-eyebrow" class="eyebrow">RESOURCE INDEX</p><h2 id="resource-heading">竞赛资料</h2></div><a id="archive-link" class="source-link" target="_blank" rel="noopener noreferrer">查看官方资料 →</a></div>
+      <p id="resource-intro" class="section-intro">只链接公开原文，并提供准备顺序和原创解读。</p>
       <div id="paper-years" class="paper-year-grid"></div>
       <div id="featured-papers" class="featured-paper-grid"></div>
     </section>
@@ -68,7 +68,9 @@
       </form>
     </section>
   </main>
-  <footer><span>林小八制作 · 数模国赛专注模式</span><span><a href="pro.html?id=cumcm-2026">返回数模简读</a> · <a href="privacy.html">隐私</a></span></footer>
+  <footer><span id="focus-footer">林小八制作 · 竞赛专注模式</span><span><a href="index.html">返回竞赛雷达</a> · <a href="privacy.html">隐私</a></span></footer>
+  <script src="data/events.js"></script>
+  <script src="data/pro-briefs.js"></script>
   <script src="data/cumcm-focus.js"></script>
   <script src="focus.js"></script>
 </body>
