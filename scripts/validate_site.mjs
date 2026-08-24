@@ -19,12 +19,14 @@ const eventWindow = loadWindowScript("data/events.js");
 const forecastWindow = loadWindowScript("data/forecast-events.js");
 const recognitionWindow = loadWindowScript("data/recognitions.js");
 const proWindow = loadWindowScript("data/pro-briefs.js");
+const focusWindow = loadWindowScript("data/cumcm-focus.js");
 const paperWindow = loadWindowScript("data/papers.js");
 const events = eventWindow.COMPETITION_EVENTS;
 const forecasts = forecastWindow.COMPETITION_FORECASTS;
 const recognitionData = recognitionWindow.FZU_RECOGNITION_DATA;
 const recognitions = recognitionData.items;
 const proBriefs = proWindow.PRO_BRIEFS;
+const focus = focusWindow.CUMCM_FOCUS;
 const papers = paperWindow.PAPER_ITEMS;
 
 assert(Array.isArray(events) && events.length > 0, "Competition data is empty");
@@ -71,6 +73,9 @@ for (const brief of proBriefs) {
   assert(brief.title && brief.summary && /^https:\/\//.test(brief.sourceUrl), `${brief.id}: incomplete Pro brief`);
   assert(brief.actions.length === 3 && brief.directions.length === 3 && brief.sprint.length === 4, `${brief.id}: invalid Pro brief structure`);
 }
+assert(focus?.id === "cumcm-2026" && focus.paperYears.length >= 3 && focus.featuredPapers.length >= 3, "CUMCM focus library is incomplete");
+assert(focus.trainingTasks.length === 6 && focus.milestones.length >= 6, "CUMCM focus plan is incomplete");
+assert([focus.officialUrl, focus.rulesUrl, focus.formatUrl, focus.archiveUrl, ...focus.paperYears.map((item) => item.url), ...focus.featuredPapers.map((item) => item.url)].every((url) => /^https:\/\//.test(url)), "CUMCM focus source must use HTTPS");
 const newestVerification = Math.max(...events.map((event) => Date.parse(`${event.verifiedAt}T00:00:00Z`)));
 assert(Date.now() - newestVerification < 22 * 24 * 60 * 60 * 1000, "Competition data has not been verified for more than 21 days");
 
@@ -87,7 +92,7 @@ const updated = Date.parse(`${paperWindow.PAPER_DATA_UPDATED_AT}T00:00:00Z`);
 assert(Number.isFinite(updated), "Paper update date is invalid");
 assert(Date.now() - updated < 8 * 24 * 60 * 60 * 1000, "Paper data has not refreshed for more than 7 days");
 
-const pages = ["index.html", "papers.html", "cet.html", "pro.html", "profile.html", "feedback.html", "privacy.html", "sources.html", "404.html"];
+const pages = ["index.html", "papers.html", "cet.html", "pro.html", "focus.html", "profile.html", "feedback.html", "privacy.html", "sources.html", "404.html"];
 for (const page of pages) {
   const html = fs.readFileSync(path.join(root, page), "utf8");
   assert((html.match(/<h1[\s>]/g) || []).length === 1, `${page}: expected exactly one h1`);
@@ -107,5 +112,5 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, forecastWindows: forecasts.length, longRangeWatch: 1, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, proBriefs: proBriefs.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, forecastWindows: forecasts.length, longRangeWatch: 1, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, proBriefs: proBriefs.length, cumcmFocus: "ok", competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
 

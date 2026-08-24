@@ -360,6 +360,7 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .premium-items b { position: absolute; z-index: 1; right: 13px; bottom: 12px; color: #c6cec0; font-size: 9px; }
 .premium-policy { margin: 16px 0 0; color: #929b8e; font-size: 10px; line-height: 1.7; }
 .premium-unlock { display: flex; margin-top: 14px; min-height: 45px; align-items: center; justify-content: center; color: var(--ink); background: var(--lime); border-radius: 10px; font-size: 12px; font-weight: 900; text-decoration: none; }
+.focus-mode-link { display: flex; justify-content: space-between; margin-top: 14px; padding: 16px; color: var(--lime); background: var(--ink); border: 1px solid #35412e; border-radius: 10px; font-weight: 900; text-decoration: none; }
 
 .profile-layout { display: grid; grid-template-columns: 1fr .82fr; gap: 16px; align-items: start; }
 .profile-layout .estimator-card input { width: 100%; min-height: 48px; padding: 10px 12px; }
@@ -423,8 +424,62 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .watch-actions { display: grid; flex: 0 0 220px; gap: 8px; }
 .watch-actions a { display: flex; min-height: 42px; align-items: center; justify-content: center; padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 800; text-align: center; text-decoration: none; }
 
+.focus-hero::after { right: -140px; border-radius: 50%; box-shadow: 0 0 0 32px rgba(168, 255, 62, .12), 0 0 0 64px rgba(168, 255, 62, .06); }
+.focus-countdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 570px; margin-top: 28px; border: 1px solid #35412e; }
+.focus-countdown div { display: flex; flex-direction: column; gap: 5px; padding: 18px; }
+.focus-countdown div + div { border-left: 1px solid #35412e; }
+.focus-countdown span { color: var(--lime); font-size: clamp(24px, 4vw, 38px); font-weight: 950; }
+.focus-countdown small { color: #aab4a5; }
+.focus-jumps { position: sticky; z-index: 7; top: 62px; display: flex; gap: 8px; margin: 14px 0 38px; padding: 10px; overflow-x: auto; background: rgba(247, 247, 241, .92); border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(12px); }
+.focus-jumps a { flex: 0 0 auto; padding: 9px 13px; color: var(--ink); background: white; border: 1px solid var(--line); border-radius: 99px; font-size: 11px; font-weight: 850; text-decoration: none; }
+.focus-section { margin: 38px 0; scroll-margin-top: 130px; }
+.focus-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 14px; }
+.focus-panel, .paper-year-card, .featured-paper-card { padding: 24px; background: white; border: 1px solid var(--line); border-radius: 18px; }
+.focus-panel h3, .paper-year-card h3 { margin: 0 0 10px; font-size: 21px; }
+.focus-panel p, .paper-year-card p, .featured-paper-card p, .section-intro { color: var(--muted); line-height: 1.7; }
+.task-checks { display: grid; gap: 9px; }
+.task-checks label { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; background: var(--soft); border-radius: 9px; font-size: 12px; line-height: 1.5; }
+.task-checks input { margin-top: 2px; accent-color: var(--lime-dark); }
+.text-button { margin-top: 12px; padding: 0; color: var(--muted); background: none; border: 0; font-size: 10px; text-decoration: underline; cursor: pointer; }
+.section-intro { max-width: 760px; margin: -8px 0 16px; }
+.paper-year-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.paper-year-card span { color: var(--lime-dark); font-size: 10px; font-weight: 900; }
+.paper-year-card h3 { margin-top: 10px; }
+.paper-year-card a, .featured-paper-card a { color: var(--ink); font-size: 11px; font-weight: 900; }
+.featured-paper-grid { display: grid; gap: 8px; margin-top: 12px; }
+.featured-paper-card { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding-block: 16px; }
+.featured-paper-card div { display: flex; flex-direction: column; gap: 4px; }
+.featured-paper-card span { font-size: 18px; font-weight: 950; }
+.featured-paper-card b { color: var(--lime-dark); font-size: 10px; }
+.featured-paper-card p { margin: 0; font-size: 12px; }
+.deep-read-sample { padding: clamp(24px, 4vw, 40px); color: white; background: var(--ink); border-radius: 24px; }
+.deep-read-sample > div:first-child > p:last-child { max-width: 720px; color: #b5bdb0; line-height: 1.7; }
+.score-layers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 22px; }
+.score-layers article { padding: 20px; background: #1a2117; border: 1px solid #35412e; border-radius: 13px; }
+.score-layers b { color: var(--lime); font-size: 10px; }
+.score-layers h3 { margin: 9px 0; font-size: 17px; }
+.score-layers p { margin: 0; color: #b5bdb0; font-size: 12px; line-height: 1.65; }
+.deep-read-actions { display: flex; gap: 18px; align-items: center; margin-top: 18px; }
+.deep-read-actions .premium-unlock { width: auto; margin: 0; padding-inline: 18px; }
+.deep-read-actions span { color: #aab4a5; font-size: 10px; }
+.reminder-section { display: grid; grid-template-columns: .8fr 1.2fr; gap: 24px; padding: clamp(22px, 4vw, 36px); background: #e8ecdf; border-radius: 24px; }
+.reminder-section > div > p:last-child { color: var(--muted); line-height: 1.7; }
+.reminder-form { display: grid; gap: 9px; }
+.reminder-form > label { display: flex; gap: 9px; align-items: center; padding: 12px; background: rgba(255,255,255,.68); border-radius: 10px; font-size: 12px; }
+.reminder-form > label:has(select) { justify-content: space-between; }
+.reminder-form select { min-width: 150px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.calendar-button.secondary { color: var(--ink); background: white; border: 1px solid var(--ink); }
+
 @media (max-width: 760px) {
   .long-range-watch { align-items: stretch; flex-direction: column; }
   .watch-actions { width: 100%; flex-basis: auto; }
+  .focus-grid, .reminder-section { grid-template-columns: 1fr; }
+  .paper-year-grid { display: flex; margin-inline: -12px; padding-inline: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .paper-year-card { flex: 0 0 78vw; scroll-snap-align: center; }
+  .featured-paper-card { grid-template-columns: 1fr; gap: 9px; }
+  .score-layers { grid-template-columns: 1fr; }
+  .deep-read-actions { align-items: flex-start; flex-direction: column; }
+  .focus-countdown { grid-template-columns: 1fr; }
+  .focus-countdown div + div { border-top: 1px solid #35412e; border-left: 0; }
 }
 

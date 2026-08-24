@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="2026数模国赛专注模式：倒计时、往届优秀论文索引、原创精读与可开关提醒。">
+  <link rel="canonical" href="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/focus.html">
+  <title>数模国赛专注模式｜学生雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">学生雷达 <span>Beta</span></a>
+    <div class="top-actions">
+      <a class="top-link" href="index.html">竞赛</a><a class="top-link" href="papers.html">论文</a><a class="top-link" href="cet.html">四六级</a><a class="top-link is-active" href="pro.html">Pro</a><a class="top-link" href="profile.html">我的</a>
+    </div>
+  </header>
+  <main>
+    <section class="hero focus-hero">
+      <p class="eyebrow">FOCUS MODE · CUMCM 2026</p>
+      <h1>只盯一场比赛<br><em>把每一天用在刀刃上</em></h1>
+      <p>数模国赛短期备赛工作台：公开优秀论文入口、原创精读、训练进度与提醒偏好集中在一个页面。</p>
+      <div class="focus-countdown"><div><span id="countdown-value">计算中</span><small id="countdown-label">距离比赛开始</small></div><div><span>09.10—09.13</span><small>官方竞赛时间</small></div></div>
+    </section>
+
+    <nav class="focus-jumps" aria-label="专注模式目录"><a href="#today">今日任务</a><a href="#papers">优秀论文</a><a href="#deep-read">精读样章</a><a href="#reminders">提醒设置</a></nav>
+
+    <section id="today" class="focus-section">
+      <div class="section-head"><div><p class="eyebrow">TODAY & PROGRESS</p><h2>备赛进度</h2></div><span id="progress-text" class="result-count">0/6</span></div>
+      <div class="focus-grid">
+        <article class="focus-panel"><h3 id="today-title">今天先做一件事</h3><p id="today-note"></p><a id="today-source" class="official-source" target="_blank" rel="noopener noreferrer">查看依据 →</a></article>
+        <article class="focus-panel"><h3>六项核心准备</h3><div id="training-tasks" class="task-checks"></div><button id="reset-progress" class="text-button" type="button">重置本机进度</button></article>
+      </div>
+    </section>
+
+    <section id="papers" class="focus-section">
+      <div class="section-head"><div><p class="eyebrow">OFFICIAL PAPER LIBRARY</p><h2>往届优秀论文入口</h2></div><a id="archive-link" class="source-link" target="_blank" rel="noopener noreferrer">2012—2025官方归档 →</a></div>
+      <p class="section-intro">论文仍在组委会指定展示网站阅读；本站只做索引、阅读顺序和原创笔记，不重新托管或售卖全文。</p>
+      <div id="paper-years" class="paper-year-grid"></div>
+      <div id="featured-papers" class="featured-paper-grid"></div>
+    </section>
+
+    <section id="deep-read" class="focus-section deep-read-sample">
+      <div><p class="eyebrow">PRO DEEP READ · 第一份精读样章</p><h2>读优秀论文，不是抄模型</h2><p>以官方展示论文为入口，按国赛评分逻辑做四层阅读。样章公开，后续完整精读包可按题型持续增加。</p></div>
+      <div class="score-layers">
+        <article><b>01 · 合理性 30—40%</b><h3>问题特征 → 模型性质</h3><p>记录作者为什么选这个模型、假设是否必要；看不出理由的“高级模型”不加分。</p></article>
+        <article><b>02 · 正确性 25—30%</b><h3>逐问检查闭环</h3><p>每一问都要有输入、求解、数值结果和验证，代码输出必须能对应正文结论。</p></article>
+        <article><b>03 · 表达 20—25%</b><h3>摘要先看数字</h3><p>摘要应逐问说明方法和具体结果；图表要被正文引用，不能只有漂亮可视化。</p></article>
+        <article><b>04 · 创新 10—15%</b><h3>可辩护的小改进</h3><p>优先做基线比较、参数修正或现实约束，不为新颖而堆砌算法。</p></article>
+      </div>
+      <div class="deep-read-actions"><a class="premium-unlock" href="mailto:792629666@qq.com?subject=%E7%94%B3%E8%AF%B7%E6%95%B0%E6%A8%A1%E5%9B%BD%E8%B5%9B%E7%B2%BE%E8%AF%BB%E5%86%85%E6%B5%8B">申请完整精读包内测</a><span>计划内容：逐页批注、模型路线图、摘要重写、复现检查表</span></div>
+    </section>
+
+    <section id="reminders" class="focus-section reminder-section">
+      <div><p class="eyebrow">REMINDERS · 本机设置</p><h2>订阅提醒偏好</h2><p>可先设置开关并导入日历。微信订阅号/服务号尚未接通，登记后才会进入内测名单，不会假装已经推送。</p></div>
+      <form id="reminder-form" class="reminder-form">
+        <label><input name="daily" type="checkbox"> 每日晚间训练提醒</label>
+        <label><input name="milestone" type="checkbox" checked> 关键备赛节点提醒</label>
+        <label><input name="official" type="checkbox" checked> 官方规则或时间变更提醒</label>
+        <label>希望接收方式<select name="channel"><option>仅导入系统日历</option><option>微信订阅号</option><option>微信服务号</option></select></label>
+        <button class="calendar-button" type="submit">保存提醒开关</button>
+        <button id="download-focus-calendar" class="calendar-button secondary" type="button">导入整套备赛日历</button>
+        <a id="wechat-waitlist" class="official-source" href="#">登记微信提醒内测 →</a>
+        <p id="reminder-status" class="source-note" role="status">设置只保存在当前浏览器。</p>
+      </form>
+    </section>
+  </main>
+  <footer><span>林小八制作 · 数模国赛专注模式</span><span><a href="pro.html?id=cumcm-2026">返回数模简读</a> · <a href="privacy.html">隐私</a></span></footer>
+  <script src="data/cumcm-focus.js"></script>
+  <script src="focus.js"></script>
+</body>
+</html>
+

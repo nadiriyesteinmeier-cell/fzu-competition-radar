@@ -4,6 +4,8 @@
 
 新增包含 3 项赛事的竞赛 Pro 简读库、付费资料预览和本地院校档案：简读会按本地专业资料匹配排序；付费候选内容仅包括原创的优秀作品拆解、经验复盘与模板，不转售公开原文。目前不接真实支付，付费意愿、昵称、学校、专业和年级只保存在当前浏览器；自填学校始终显示“未认证”。
 
+数模国赛已提供第一版专注模式：聚合中国大学生在线 2012—2025 官方优秀论文展示入口，提供短期训练清单、原创四层精读样章和六节点 `.ics` 日历。微信订阅号/服务号目前仅保存本地提醒偏好并登记内测，尚未接通真实推送。
+
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
