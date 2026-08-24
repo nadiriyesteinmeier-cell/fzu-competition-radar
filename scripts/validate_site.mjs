@@ -70,7 +70,7 @@ const updated = Date.parse(`${paperWindow.PAPER_DATA_UPDATED_AT}T00:00:00Z`);
 assert(Number.isFinite(updated), "Paper update date is invalid");
 assert(Date.now() - updated < 8 * 24 * 60 * 60 * 1000, "Paper data has not refreshed for more than 7 days");
 
-const pages = ["index.html", "papers.html", "cet.html", "feedback.html", "privacy.html", "sources.html", "404.html"];
+const pages = ["index.html", "papers.html", "cet.html", "pro.html", "profile.html", "feedback.html", "privacy.html", "sources.html", "404.html"];
 for (const page of pages) {
   const html = fs.readFileSync(path.join(root, page), "utf8");
   assert((html.match(/<h1[\s>]/g) || []).length === 1, `${page}: expected exactly one h1`);

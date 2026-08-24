@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11150f">
+  <meta name="description" content="学生雷达本地院校档案：学校、专业和年级仅保存在当前浏览器。">
+  <link rel="canonical" href="https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/profile.html">
+  <title>我的院校档案｜学生雷达</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">学生雷达 <span>Beta</span></a>
+    <div class="top-actions"><a class="top-link" href="index.html">竞赛</a><a class="top-link" href="pro.html">Pro</a><a class="top-link is-active" href="profile.html">我的</a></div>
+  </header>
+
+  <main>
+    <section class="hero profile-hero">
+      <p class="eyebrow">LOCAL STUDENT PROFILE</p>
+      <h1>先做本地档案<br><em>暂不做虚假认证</em></h1>
+      <p>这些信息只用于个性化推荐，并只保存在当前浏览器。选择福州大学不等于完成学校认证。</p>
+      <div class="privacy-pill">不需要账号 · 不上传 · 可随时清除</div>
+    </section>
+
+    <div class="profile-layout">
+      <form id="profile-form" class="estimator-card">
+        <div class="section-head compact-head"><div><p class="eyebrow">YOUR PROFILE</p><h2>我的院校档案</h2></div><span class="badge badge-unmatched">未认证</span></div>
+        <label class="field-label" for="profile-nickname">昵称</label>
+        <input id="profile-nickname" name="nickname" maxlength="20" value="林小八" required>
+        <label class="field-label" for="profile-school">学校</label>
+        <select id="profile-school" name="school" required><option value="福州大学">福州大学</option><option value="其他院校">其他院校</option></select>
+        <label class="field-label" for="profile-major">专业</label>
+        <input id="profile-major" name="major" maxlength="40" value="数字媒体技术" required>
+        <label class="field-label" for="profile-grade">年级</label>
+        <select id="profile-grade" name="grade" required><option>大一</option><option>大二</option><option selected>大三</option><option>大四</option><option>研究生</option><option>其他</option></select>
+        <label class="field-label" for="profile-language">英文沟通</label>
+        <select id="profile-language" name="language"><option>可以进行英文沟通</option><option>只能阅读基础英文</option><option>希望优先中文内容</option></select>
+        <button class="estimate-button" type="submit">保存到当前设备</button>
+        <button id="clear-profile" class="secondary-button" type="button">清除本地档案</button>
+        <p class="form-note">不会收集学号、学生证、身份证、手机号或学校密码。</p>
+      </form>
+
+      <section class="profile-preview" aria-live="polite">
+        <p class="eyebrow">PROFILE CARD</p>
+        <div class="avatar-mark">八</div>
+        <h2 id="preview-name">林小八</h2>
+        <p id="preview-school">福州大学 · 数字媒体技术 · 大三</p>
+        <div class="verification-state"><span>!</span><div><strong>院校身份未认证</strong><small>当前只是你在本机填写的资料，不代表福州大学官方确认。</small></div></div>
+        <div class="profile-benefits"><span>用于竞赛匹配</span><span>用于Pro建议</span><span>不上传服务器</span></div>
+        <p id="profile-status" class="copy-status">尚未保存</p>
+      </section>
+    </div>
+
+    <section class="sources profile-next">
+      <div><p class="eyebrow">FUTURE VERIFICATION</p><h2>什么时候才做真正认证？</h2></div>
+      <ul><li>有真实组队需求，需要减少冒充身份时。</li><li>至少有20名持续使用的学生后。</li><li>能够提供学校邮箱验证或经过隐私评估的审核方案后。</li><li>认证结果只能称为“平台认证”，不能冒充学校官方认证。</li></ul>
+    </section>
+  </main>
+
+  <footer><span>林小八制作 · 档案仅保存在当前设备</span><span><a href="index.html">竞赛</a> · <a href="pro.html">Pro简读</a> · <a href="privacy.html">隐私</a></span></footer>
+  <script src="profile.js"></script>
+</body>
+</html>

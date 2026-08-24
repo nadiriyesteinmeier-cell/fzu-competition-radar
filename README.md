@@ -2,6 +2,8 @@
 
 面向大学生的信息雷达验证版。当前包含竞赛雷达、论文雷达和四六级助手：竞赛页用横向时间轴展示 9 项有确切日期的已核验赛事，并提供 185 项福州大学 2026 认定竞赛目录、筛选、收藏和 `.ics` 日历导出；论文页每天自动更新数字媒体相关领域的最新公开元数据；四六级页在本地计算非官方估分区间。
 
+新增竞赛 Pro 简读验证页和本地院校档案：目前不接真实支付，付费意愿、昵称、学校、专业和年级只保存在当前浏览器；自填学校始终显示“未认证”。
+
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
