@@ -12,6 +12,8 @@
 
 “我的”页面已升级为本地个人中心，集中显示竞赛专注进度、论文精读记录、最近 10 次四六级估分区间和两类收藏。活动数据可以一键清除，且不会清除收藏与院校档案；四六级仅保存结果区间，不保存各题输入。
 
+本地开发环境可连接相邻目录 `student-radar-api` 的论文精读后端：后端使用 Responses API 和 JSON Schema 返回结构化中文结果，密钥只存在服务端，并带每日请求上限、输入长度限制和按论文/服务类型缓存。GitHub Pages 未配置 HTTPS 后端时会自动回退到无费用的演示结果。
+
 在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
 
 论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
