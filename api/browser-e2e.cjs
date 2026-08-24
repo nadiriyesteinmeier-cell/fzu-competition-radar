@@ -5,6 +5,7 @@ const runtimeModules = process.env.PLAYWRIGHT_MODULE_PATH;
 if (!runtimeModules) throw new Error("PLAYWRIGHT_MODULE_PATH is required");
 const runtimeRequire = createRequire(path.join(runtimeModules, "package.json"));
 const { chromium, devices } = runtimeRequire("playwright");
+const siteBase = String(process.env.E2E_SITE_BASE || "http://127.0.0.1:8765").replace(/\/$/, "");
 
 async function run(name, contextOptions, productName, expectedHeading, forbiddenHeading, screenshotPath) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -13,8 +14,8 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-  await page.goto("http://127.0.0.1:8765/paper-analysis.html?id=2608.21360", { waitUntil: "networkidle" });
-  await page.getByText("本地AI已连接").waitFor();
+  await page.goto(`${siteBase}/paper-analysis.html?id=2608.21360`, { waitUntil: "networkidle" });
+  await page.getByText(/(?:本地|云端)AI已连接/).waitFor();
   await page.getByRole("button", { name: new RegExp(productName) }).click();
   await page.locator("#mock-unlock").click();
   await page.getByRole("heading", { name: "AI精读已生成" }).waitFor();
@@ -30,7 +31,7 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true });
   await page.evaluate(() => localStorage.removeItem("student-radar-paper-orders-v1"));
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByText("本地AI已连接").waitFor();
+  await page.getByText(/(?:本地|云端)AI已连接/).waitFor();
   const restoredCount = await page.locator("#reading-count").textContent();
   if (!restoredCount || !restoredCount.includes("1 条")) throw new Error(`${name}: server history did not restore local reading list (${restoredCount})`);
   await browser.close();
@@ -41,6 +42,11 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   const outputDir = process.env.E2E_OUTPUT_DIR || process.cwd();
   const results = [];
   const desktop = { viewport: { width: 1440, height: 1000 } };
+  if (process.env.E2E_LIVE === "true") {
+    results.push(await run("live-mobile-innovation", { ...devices["iPhone 13"] }, "创新点提取", "必须核验的问题", "方法路线", path.join(outputDir, "paper-analysis-live-mobile.png")));
+    process.stdout.write(`${JSON.stringify(results)}\n`);
+    return;
+  }
   results.push(await run("desktop-quick", desktop, "快速简析", "阅读价值", "创新点候选"));
   results.push(await run("desktop-innovation", desktop, "创新点提取", "必须核验的问题", "方法路线", path.join(outputDir, "paper-analysis-desktop.png")));
   results.push(await run("desktop-deep", desktop, "深度解读", "复现准备", "作者摘要中文阅读版"));
