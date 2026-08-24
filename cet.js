@@ -5,7 +5,17 @@
   const placeholder = document.querySelector("#result-placeholder");
   const content = document.querySelector("#result-content");
   const ratios = { 1: 0.2, 2: 0.4, 3: 0.6, 4: 0.78, 5: 0.9 };
+  const historyKey = "student-radar-cet-history-v1";
   let lastResult;
+
+  function saveHistory(result) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(historyKey) || "[]");
+      const history = Array.isArray(saved) ? saved : [];
+      history.unshift({ id: `CET-${Date.now()}`, level: result.level, low: result.low, high: result.high, center: result.center, createdAt: new Date().toISOString() });
+      localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 10)));
+    } catch (_) {}
+  }
 
   function boundedNumber(id, min, max) {
     const input = document.querySelector(id);
@@ -56,6 +66,7 @@
         high: Math.min(710, center + margin)
       };
       render(lastResult);
+      saveHistory(lastResult);
     } catch (error) {
       document.querySelector("#share-status").textContent = error.message;
     }
@@ -74,3 +85,4 @@
 
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js");
 })();
+
