@@ -39,14 +39,15 @@
         </article>
       </section>
       <aside class="analysis-checkout">
-        <p class="eyebrow">SIMULATED CHECKOUT</p><h2 id="checkout-name">快速简析</h2><p id="checkout-description"></p>
-        <div class="checkout-price"><strong id="checkout-price">¥1.9</strong><span>一次性解锁 · 当前仅模拟</span></div>
-        <ul id="checkout-features"></ul><button id="mock-unlock" type="button">模拟解锁 · 不扣费</button><small>现在不需要登录，也不会发起微信支付。</small>
+        <div class="analysis-runtime"><span id="ai-runtime-status">演示模式</span></div>
+        <p class="eyebrow">READING CHECKOUT</p><h2 id="checkout-name">快速简析</h2><p id="checkout-description"></p>
+        <div class="checkout-price"><strong id="checkout-price">¥1.9</strong><span>一次性解锁 · 支付仍为模拟</span></div>
+        <ul id="checkout-features"></ul><button id="mock-unlock" type="button">模拟解锁 · 不扣费</button><small id="checkout-status">正在检查本地AI服务……</small>
       </aside>
     </div>
     <section id="analysis-result" class="analysis-result" hidden>
-      <div class="section-head"><div><p class="eyebrow">YOUR READING NOTE</p><h2>已生成演示阅读卡</h2></div><button id="copy-analysis" type="button">复制 Markdown</button></div>
-      <div class="result-notice">演示结果基于作者摘要自动定位，仅用于验证页面体验。接入AI后才会生成中文翻译、全文分析和可靠的创新性对比。</div>
+      <div class="section-head"><div><p class="eyebrow">YOUR READING NOTE</p><h2 id="result-heading">已生成演示阅读卡</h2></div><button id="copy-analysis" type="button">复制 Markdown</button></div>
+      <div id="result-notice" class="result-notice">演示结果基于作者摘要自动定位，仅用于验证页面体验。</div>
       <div id="analysis-result-grid" class="analysis-result-grid"></div><small id="analysis-copy-status" aria-live="polite"></small>
     </section>
     <section id="my-reading" class="reading-library">
@@ -58,3 +59,4 @@
   <script src="data/papers.js"></script><script src="paper-analysis.js"></script>
 </body>
 </html>
+
