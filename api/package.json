@@ -1,0 +1,12 @@
+{
+  "name": "student-radar-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs",
+    "smoke": "node smoke-test.mjs"
+  }
+}
+
