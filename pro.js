@@ -20,6 +20,8 @@
     sprint: document.querySelector("#brief-sprint"),
     checklist: document.querySelector("#brief-checklist"),
     warning: document.querySelector("#brief-warning"),
+    premiumItems: document.querySelector("#premium-items"),
+    premiumEmail: document.querySelector("#premium-email"),
     source: document.querySelector("#brief-source"),
     sourceNote: document.querySelector("#brief-source-note"),
     interest: document.querySelector("#interest-result"),
@@ -116,6 +118,15 @@
       return item;
     });
     elements.warning.textContent = brief.warning;
+    makeList(elements.premiumItems, brief.premium || [], ([title, text]) => {
+      const item = document.createElement("div");
+      item.innerHTML = `<span>PRO</span><strong></strong><p></p><b>预览锁定</b>`;
+      item.querySelector("strong").textContent = title;
+      item.querySelector("p").textContent = text;
+      return item;
+    });
+    const premiumBody = `申请学生雷达Pro免费内测\n竞赛：${brief.title}\n希望体验：优秀作品拆解 / 经验复盘 / 原创模板\n备注：当前不产生付款。`;
+    elements.premiumEmail.href = `mailto:792629666@qq.com?subject=${encodeURIComponent("申请学生雷达Pro免费内测")}&body=${encodeURIComponent(premiumBody)}`;
     elements.source.href = brief.sourceUrl;
     elements.source.textContent = `${brief.sourceLabel} →`;
     elements.sourceNote.textContent = `核验于 ${brief.verifiedAt}。简读只基于公开规则整理，校内安排仍以福州大学最新通知为准。`;
@@ -160,3 +171,4 @@
   const defaultBrief = briefs.find((item) => item.id === requested) || [...briefs].sort((a, b) => fitScore(b) - fitScore(a))[0];
   if (defaultBrief) renderBrief(defaultBrief);
 })();
+

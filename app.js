@@ -1,7 +1,10 @@
 (function () {
   "use strict";
 
-  const events = Array.isArray(window.COMPETITION_EVENTS) ? window.COMPETITION_EVENTS : [];
+  const confirmedEvents = Array.isArray(window.COMPETITION_EVENTS) ? window.COMPETITION_EVENTS : [];
+  const forecasts = Array.isArray(window.COMPETITION_FORECASTS) ? window.COMPETITION_FORECASTS : [];
+  const events = [...confirmedEvents, ...forecasts];
+  const longRangeWatch = window.LONG_RANGE_WATCH || null;
   const recognitionData = window.FZU_RECOGNITION_DATA || { items: [] };
   const recognitions = Array.isArray(recognitionData.items) ? recognitionData.items : [];
   const now = new Date();
@@ -12,6 +15,8 @@
     query: "",
     soonOnly: false,
     recognizedOnly: false,
+    includeForecasts: true,
+    popularity: "全部",
     favoritesOnly: false,
     favorites: loadFavorites(),
     selectedId: events[0]?.id || null,
@@ -32,6 +37,8 @@
     search: document.querySelector("#search-input"),
     soonOnly: document.querySelector("#soon-only"),
     recognizedOnly: document.querySelector("#recognized-only"),
+    forecastToggle: document.querySelector("#forecast-toggle"),
+    popularityFilter: document.querySelector("#popularity-filter"),
     favoritesOnly: document.querySelector("#favorites-only"),
     previous: document.querySelector("#timeline-prev"),
     next: document.querySelector("#timeline-next"),
@@ -46,6 +53,7 @@
     directoryList: document.querySelector("#directory-list"),
     directoryMore: document.querySelector("#directory-more"),
     directoryEmpty: document.querySelector("#directory-empty"),
+    longRangeWatch: document.querySelector("#long-range-watch"),
     install: document.querySelector("#install-button")
   };
 
@@ -91,7 +99,16 @@
   }
 
   function verificationLabel(value) {
-    return { "school-official": "福大官方", "organizer-official": "组委会官方", "government-official": "政府官方" }[value] || "来源已核验";
+    return { "school-official": "福大官方", "organizer-official": "组委会官方", "government-official": "政府官方", "historical-official": "往届官方依据" }[value] || "来源已核验";
+  }
+
+  function popularityOf(event) {
+    return event.popularity || ({
+      "cumcm-2026": "A",
+      "china-international-college-innovation-2026": "A",
+      "ncda-watsons-aigc-2026": "B",
+      "ccf-cacc-entrepreneurship-2026": "B"
+    }[event.id] || "");
   }
 
   function addText(parent, className, text) {
@@ -123,6 +140,8 @@
       const haystack = [event.title, event.category, event.organizer, event.audience, event.summary].join(" ").toLocaleLowerCase("zh-CN");
       return (state.category === "全部" || event.category === state.category)
         && (!query || haystack.includes(query))
+        && (state.includeForecasts || !event.isForecast)
+        && (state.popularity === "全部" || popularityOf(event) === state.popularity)
         && (!state.soonOnly || hasMilestoneSoon(event))
         && (!state.recognizedOnly || Boolean(event.recognition))
         && (!state.favoritesOnly || state.favorites.has(event.id));
@@ -142,6 +161,7 @@
     point.querySelector("small").textContent = milestone.label;
     if (event.id === state.selectedId) point.classList.add("is-selected");
     if (state.favorites.has(event.id)) point.classList.add("is-favorite");
+    if (event.isForecast) point.classList.add("is-forecast");
     point.addEventListener("click", () => selectEvent(event.id));
     return point;
   }
@@ -149,10 +169,14 @@
   function renderDetail(event) {
     if (!event) { elements.detail.replaceChildren(); return; }
     const card = elements.template.content.firstElementChild.cloneNode(true);
+    if (event.isForecast) card.classList.add("is-forecast");
     const badges = card.querySelector(".badges");
     addText(badges, "badge badge-category", event.category);
     addText(badges, "badge", event.level);
     addText(badges, "badge badge-verified", verificationLabel(event.verification));
+    const popularity = popularityOf(event);
+    if (popularity) addText(badges, `badge popularity-${popularity.toLowerCase()}`, `${popularity}档热门 · 平台参考`);
+    if (event.isForecast) addText(badges, "badge badge-forecast", `${event.forecastWindow} · 非官方日期`);
     if (event.recognition) {
       addText(badges, "badge badge-recognized", event.recognition.status === "direct" ? `福大直接认定 · ${event.recognition.level}` : `福大目录赛事 · ${event.recognition.level}`);
     } else {
@@ -167,7 +191,7 @@
     const next = futureMilestones(event)[0];
     const callout = card.querySelector(".deadline-callout");
     if (next) {
-      addText(callout, "", `下一节点 · ${next.label}`);
+      addText(callout, "", `${event.isForecast ? "预计节点" : "下一节点"} · ${next.label}`);
       const strong = document.createElement("strong");
       strong.textContent = `${formatDate(next.at)} · ${countdown(next.at)}`;
       callout.append(strong);
@@ -210,7 +234,13 @@
     const source = card.querySelector(".source-link");
     source.href = event.sourceUrl;
     source.textContent = event.sourceLabel;
-    card.querySelector(".calendar-button").addEventListener("click", () => downloadCalendar(event));
+    const calendarButton = card.querySelector(".calendar-button");
+    if (event.isForecast) {
+      calendarButton.textContent = "预测日期不可导入";
+      calendarButton.disabled = true;
+    } else {
+      calendarButton.addEventListener("click", () => downloadCalendar(event));
+    }
     card.querySelector(".verified-at").textContent = `核验于 ${event.verifiedAt} · 日期有变请以官方原文为准`;
     elements.detail.replaceChildren(card);
   }
@@ -224,7 +254,9 @@
     const visible = filteredEvents();
     if (!visible.some((event) => event.id === state.selectedId)) state.selectedId = visible[0]?.id || null;
     elements.track.replaceChildren(...visible.map(renderPoint));
-    elements.count.textContent = `${visible.length} 个有确切日期的赛事`;
+    const confirmedCount = visible.filter((event) => !event.isForecast).length;
+    const forecastCount = visible.length - confirmedCount;
+    elements.count.textContent = forecastCount ? `${confirmedCount} 个官方赛事 + ${forecastCount} 个预测窗口` : `${confirmedCount} 个官方赛事`;
     elements.empty.hidden = visible.length !== 0;
     elements.scroll.parentElement.hidden = visible.length === 0;
     renderDetail(visible.find((event) => event.id === state.selectedId));
@@ -308,12 +340,12 @@
   }
 
   function renderStats() {
-    const soonCount = events.flatMap((event) => event.milestones).filter((milestone) => {
+    const soonCount = confirmedEvents.flatMap((event) => event.milestones).filter((milestone) => {
       const delta = dateOf(milestone) - now;
       return delta >= 0 && delta <= 30 * DAY;
     }).length;
-    const latest = events.map((event) => event.verifiedAt).sort().at(-1);
-    elements.verifiedCount.textContent = String(events.length);
+    const latest = confirmedEvents.map((event) => event.verifiedAt).sort().at(-1);
+    elements.verifiedCount.textContent = String(confirmedEvents.length);
     elements.upcomingCount.textContent = String(soonCount);
     elements.recognitionCount.textContent = String(recognitions.length);
     elements.latestDate.textContent = latest ? latest.slice(5).replace("-", ".") : "—";
@@ -329,6 +361,8 @@
   elements.search.addEventListener("input", (event) => { state.query = event.target.value; renderTimeline(); });
   elements.soonOnly.addEventListener("change", (event) => { state.soonOnly = event.target.checked; renderTimeline(); });
   elements.recognizedOnly.addEventListener("change", (event) => { state.recognizedOnly = event.target.checked; renderTimeline(); });
+  elements.forecastToggle.addEventListener("change", (event) => { state.includeForecasts = event.target.checked; renderTimeline(); });
+  elements.popularityFilter.addEventListener("change", (event) => { state.popularity = event.target.value; renderTimeline(); });
   elements.favoritesOnly.addEventListener("change", (event) => { state.favoritesOnly = event.target.checked; renderTimeline(); });
   elements.previous.addEventListener("click", () => moveSelection(-1));
   elements.next.addEventListener("click", () => moveSelection(1));
@@ -353,4 +387,16 @@
   renderStats();
   renderTimeline();
   renderDirectory();
+  if (longRangeWatch) {
+    const start = new Date(longRangeWatch.startsAt);
+    const end = new Date(longRangeWatch.endsAt);
+    elements.longRangeWatch.innerHTML = `<div><span class="badge popularity-a">A档热门 · 平台参考</span><span class="badge badge-recognized"></span><p class="eyebrow">LONG-RANGE WATCH · 三个月以外</p><h2></h2><p></p></div><div class="watch-actions"><a class="source-link" target="_blank" rel="noopener noreferrer"></a><a class="calendar-button" href="pro.html?id=cumcm-2026">查看备赛简读</a></div>`;
+    elements.longRangeWatch.querySelector(".badge-recognized").textContent = longRangeWatch.recognition;
+    elements.longRangeWatch.querySelector("h2").textContent = longRangeWatch.title;
+    elements.longRangeWatch.querySelector("div > p:last-child").textContent = `${longRangeWatch.status}。比赛窗口：${formatDate(start, false)}—${formatDate(end, false)}（按官方美东时间换算可能跨北京时间日期）。`;
+    const source = elements.longRangeWatch.querySelector(".source-link");
+    source.href = longRangeWatch.sourceUrl;
+    source.textContent = longRangeWatch.sourceLabel;
+  }
 })();
+

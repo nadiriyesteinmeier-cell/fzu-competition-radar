@@ -16,10 +16,12 @@ function loadWindowScript(relativePath) {
 }
 
 const eventWindow = loadWindowScript("data/events.js");
+const forecastWindow = loadWindowScript("data/forecast-events.js");
 const recognitionWindow = loadWindowScript("data/recognitions.js");
 const proWindow = loadWindowScript("data/pro-briefs.js");
 const paperWindow = loadWindowScript("data/papers.js");
 const events = eventWindow.COMPETITION_EVENTS;
+const forecasts = forecastWindow.COMPETITION_FORECASTS;
 const recognitionData = recognitionWindow.FZU_RECOGNITION_DATA;
 const recognitions = recognitionData.items;
 const proBriefs = proWindow.PRO_BRIEFS;
@@ -44,6 +46,13 @@ for (const event of events) {
     assert(event.recognition.level && event.recognition.officialName && event.recognition.source, `${event.id}: incomplete recognition metadata`);
   }
 }
+assert(Array.isArray(forecasts) && forecasts.length === 3, "Expected three historical-cycle forecasts");
+for (const forecast of forecasts) {
+  assert(forecast.isForecast === true && ["A", "B"].includes(forecast.popularity), `${forecast.id}: invalid forecast classification`);
+  assert(/^https:\/\//.test(forecast.sourceUrl) && forecast.basisYear < 2026, `${forecast.id}: forecast must cite a previous official cycle`);
+  assert(forecast.warning.includes("等待") || forecast.warning.includes("尚未"), `${forecast.id}: forecast disclaimer is missing`);
+}
+assert(forecastWindow.LONG_RANGE_WATCH?.id === "mcm-icm-2027", "Long-range MCM/ICM watch is missing");
 const recognized = events.filter((event) => event.recognition);
 assert(recognized.length === 3, "Expected three current events matched to the FZU 2026 recognition lists");
 assert(recognized.filter((event) => event.recognition.status === "direct").length === 2, "Expected two exact direct-recognition matches");
@@ -98,4 +107,5 @@ const publicText = fs.readdirSync(root, { recursive: true, withFileTypes: true }
   .join("\n");
 assert(!/(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})/.test(publicText), "Possible API token found in public files");
 
-console.log(JSON.stringify({ competitions: events.length, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, proBriefs: proBriefs.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+console.log(JSON.stringify({ competitions: events.length, forecastWindows: forecasts.length, longRangeWatch: 1, fzuRecognizedMatches: recognized.length, recognitionCatalog: recognitions.length, proBriefs: proBriefs.length, competitionFreshness: "ok", papers: papers.length, paperFreshness: "ok", pages: pages.length, manifest: "ok", secrets: "none" }, null, 2));
+

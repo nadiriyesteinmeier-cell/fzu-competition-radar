@@ -52,8 +52,11 @@
       <div class="control-row">
         <label><input id="soon-only" type="checkbox"> 只看30天内有节点</label>
         <label><input id="recognized-only" type="checkbox"> 只看福大2026认定</label>
+        <label><input id="forecast-toggle" type="checkbox" checked> 包含往届周期预测</label>
         <label><input id="favorites-only" type="checkbox"> 只看收藏</label>
+        <label><span class="sr-only">按学生雷达热门度筛选</span><select id="popularity-filter" class="inline-select"><option value="全部">全部热度</option><option value="A">A档热门</option><option value="B">B档热门</option></select></label>
       </div>
+      <p class="classification-note"><b>A/B档是学生雷达参考热度，不是福大官方分类。</b> 福大原表使用“国际级、国家级、省部级”和“直接认定、分级认定”。橙色空心点表示按往届官方周期推测，不能当作正式截止日期。</p>
     </section>
 
     <section class="list-section timeline-section">
@@ -66,7 +69,7 @@
       </div>
       <div class="timeline-shell">
         <div class="timeline-toolbar">
-          <span>按下一关键节点排序 · 点击圆点展开</span>
+          <span><i class="legend-dot confirmed"></i>官方确认 <i class="legend-dot forecast"></i>往届预测 · 点击圆点展开</span>
           <div>
             <button id="timeline-prev" type="button" aria-label="上一个竞赛">←</button>
             <button id="timeline-next" type="button" aria-label="下一个竞赛">→</button>
@@ -82,6 +85,8 @@
       </div>
       <div id="event-detail" class="event-detail" aria-live="polite"></div>
     </section>
+
+    <section id="long-range-watch" class="long-range-watch" aria-label="三个月以外热门赛事预告"></section>
 
     <a class="pro-teaser" href="pro.html">
       <span><small>PRO BRIEF · 付费意愿测试</small><strong>第一份竞赛简读：数字媒体科技作品及创意竞赛</strong></span>
@@ -154,8 +159,10 @@
   </template>
 
   <script src="data/events.js"></script>
+  <script src="data/forecast-events.js"></script>
   <script src="data/recognitions.js"></script>
   <script src="app.js"></script>
   <script src="share.js"></script>
 </body>
 </html>
+
