@@ -18,8 +18,23 @@ async function waitForServer() {
 }
 
 try {
-  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock" && health.volumeAttached === false && health.revision === "local", "Unexpected test modes");
+  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock" && health.identityMode === "account_or_device" && health.volumeAttached === false && health.revision === "local", "Unexpected test modes");
   const productResult = await request("/api/products"); assert(productResult.value.products.length === 4, "Expected four products");
+  const weakRegistration = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "short", nickname: "测试同学" }) });
+  assert(weakRegistration.response.status === 400, "Weak password guard failed");
+  const registered = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026", nickname: "测试同学" }) });
+  assert(registered.response.status === 201 && registered.value.account.verification.status === "unverified" && registered.value.token, "Account registration failed");
+  const token = registered.value.token; const authHeaders = { "content-type": "application/json", authorization: `Bearer ${token}` };
+  const duplicate = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026", nickname: "测试同学" }) });
+  assert(duplicate.response.status === 409, "Duplicate account guard failed");
+  const anonymousMe = await request("/api/auth/me"); assert(anonymousMe.response.status === 401, "Anonymous account guard failed");
+  const me = await request("/api/auth/me", { headers: authHeaders }); assert(me.response.ok && me.value.account.email === "student@example.com", "Account session failed");
+  const profile = await request("/api/me/profile", { method: "PUT", headers: authHeaders, body: JSON.stringify({ nickname: "测试同学", school: "福州大学", major: "数字媒体技术", grade: "大三", language: "可以进行英文沟通" }) });
+  assert(profile.response.ok && profile.value.account.profile.school === "福州大学" && profile.value.account.verification.status === "unverified", "Account profile save failed");
+  const badLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "wrong-password" }) });
+  assert(badLogin.response.status === 401, "Invalid login guard failed");
+  const loggedIn = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026" }) });
+  assert(loggedIn.response.ok && loggedIn.value.token, "Account login failed");
   const invalid = await request("/api/orders", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); assert(invalid.response.status === 400, "Invalid order guard failed");
   const clientId = crypto.randomUUID();
   const paper = { paperId: "2608.21360", title: "Test Paper", authors: ["Test Author"], abstract: "We introduce a test method and report a test result." };
@@ -54,7 +69,15 @@ try {
   assert(emptyHistory.response.ok && emptyHistory.value.orders.length === 0, "Order history ownership isolation failed");
   const invalidHistory = await request("/api/orders"); assert(invalidHistory.response.status === 400, "Invalid history client guard failed");
   const wrongClient = await request(`/api/orders/${firstOrderId}?clientId=${crypto.randomUUID()}`); assert(wrongClient.response.status === 404, "Order ownership guard failed");
-  console.log(JSON.stringify({ health: "ok", products: 4, productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "isolated", ownership: "ok" }));
+  const accountOrder = await request("/api/orders", { method: "POST", headers: authHeaders, body: JSON.stringify({ paperId: paper.paperId, paperTitle: paper.title, productId: "quick" }) });
+  assert(accountOrder.response.status === 201, "Account order creation failed");
+  const accountHistory = await request("/api/orders", { headers: authHeaders });
+  assert(accountHistory.response.ok && accountHistory.value.identityMode === "account" && accountHistory.value.orders.length === 1, "Cross-device account history failed");
+  const deviceCannotReadAccountOrder = await request(`/api/orders/${accountOrder.value.order.id}?clientId=${clientId}`);
+  assert(deviceCannotReadAccountOrder.response.status === 404, "Account order leaked to device identity");
+  const loggedOut = await request("/api/auth/logout", { method: "POST", headers: authHeaders, body: "{}" }); assert(loggedOut.response.ok, "Logout failed");
+  const expiredMe = await request("/api/auth/me", { headers: authHeaders }); assert(expiredMe.response.status === 401, "Logout session remained active");
+  console.log(JSON.stringify({ health: "ok", products: 4, accounts: "session-backed", profiles: "server-backed", productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "account-and-device-isolated", ownership: "ok" }));
 } finally {
   child.kill();
   await new Promise((resolve) => child.once("exit", resolve));

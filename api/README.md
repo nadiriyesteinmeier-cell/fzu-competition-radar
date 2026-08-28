@@ -22,6 +22,15 @@ npm start
 5. 生成成功后订单变成 `completed`，重复请求直接返回原结果。
 6. `GET /api/orders?clientId=...` 返回当前设备最近 30 个订单，用于恢复被清掉的本地精读列表。
 
+## Web 内测账号
+
+- `POST /api/auth/register`：邮箱、8—72 字符密码和昵称注册，返回一次会话令牌。
+- `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`：登录、退出和恢复会话。
+- `PUT /api/me/profile`：登录后同步昵称、学校、专业、年级和英文沟通偏好。
+- 登录请求通过 `Authorization: Bearer <token>` 访问账号订单；未登录时仍兼容随机设备 `clientId`。
+
+账号档案中的院校状态默认是“平台未认证”。当前不收集学号、学生证或学校密码，也没有开放人工认证；该账号系统只用于 Web 内测和跨设备恢复，不能直接视为微信小程序正式身份体系。
+
 运行 `npm test` 会在隔离的临时目录中验证商品、订单、未支付拦截、模拟支付、权益、生成幂等和订单归属。测试使用 `AI_MOCK_MODE=true`，不会调用模型或产生费用。
 
 当前只分析 arXiv 元数据中的作者摘要，不下载论文 PDF，不声称核验了全文。部署前仍需增加用户登录、数据库、支付回调、持久化限流和 HTTPS 域名。
@@ -36,4 +45,3 @@ npm start
 
 Web 内测的逐项部署步骤见 `DEPLOY-RAILWAY.md`；微信小程序阶段的数据库与身份迁移见 `CLOUDBASE-MIGRATION.md`。服务会优先读取 `API_PORT`，未设置时读取云平台注入的 `PORT`。
 
-Railway Volume 挂载到 `/app/data` 时，容器入口会先修正挂载目录权限，再降权为 `node` 用户启动服务；部署日志应出现 `docker-entrypoint.sh` 与 `su-exec`。

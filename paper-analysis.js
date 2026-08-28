@@ -3,6 +3,7 @@
   const papers = Array.isArray(window.PAPER_ITEMS) ? window.PAPER_ITEMS : [];
   const orderKey = "student-radar-paper-orders-v1";
   const clientKey = "student-radar-client-id-v1";
+  const authKey = "student-radar-auth-v1";
   const labels = { "cs.CV": "计算机视觉", "cs.AI": "人工智能", "cs.HC": "人机交互" };
   const products = [
     { id: "quick", name: "快速简析", price: "1.9", note: "3分钟掌握论文在做什么", features: ["中文一句话结论", "研究问题与方法", "关键结果", "阅读价值判断"] },
@@ -78,6 +79,8 @@
     if (!/^[A-Za-z0-9-]{16,80}$/.test(value || "")) { value = crypto.randomUUID(); localStorage.setItem(clientKey, value); }
     return value;
   }
+  function authToken() { try { const value = JSON.parse(localStorage.getItem(authKey) || "null"); return typeof value?.token === "string" ? value.token : ""; } catch (_) { return ""; } }
+  function apiHeaders(json = false) { return { ...(json ? { "content-type": "application/json" } : {}), ...(authToken() ? { authorization: `Bearer ${authToken()}` } : {}) }; }
   function saveOrder(status, analysis, backendOrder) {
     const orders = readOrders(); const item = { id: backendOrder?.id || `${status === "AI已生成" ? "AI" : "DEMO"}-${Date.now()}`, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id, productName: currentProduct.name, price: backendOrder ? String(backendOrder.priceFen / 100) : currentProduct.price, createdAt: backendOrder?.createdAt || new Date().toISOString(), status, analysis: analysis || null };
     writeOrders([item, ...orders.filter((order) => order.id !== item.id)]);
@@ -88,8 +91,10 @@
     remoteOrders.forEach((order) => merged.set(order.id, { id: order.id, paperId: order.paperId, paperTitle: order.paperTitle, productId: order.productId, productName: order.productName, price: String(order.priceFen / 100), createdAt: order.createdAt, status: labels[order.status] || order.status, analysis: order.analysis || null }));
     const orders = [...merged.values()].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30); writeOrders(orders); renderReading(); return remoteOrders.length;
   }
-  async function syncOrderHistory() {
-    const response = await fetch(`${apiBase}/api/orders?clientId=${encodeURIComponent(clientId())}`, { signal: AbortSignal.timeout(2500) });
+  async function syncOrderHistory(retried = false) {
+    const token = authToken(); const query = token ? "" : `?clientId=${encodeURIComponent(clientId())}`;
+    const response = await fetch(`${apiBase}/api/orders${query}`, { headers: apiHeaders(), signal: AbortSignal.timeout(2500) });
+    if (response.status === 401 && token && !retried) { localStorage.removeItem(authKey); return syncOrderHistory(true); }
     const value = await response.json(); if (!response.ok || !Array.isArray(value.orders)) throw new Error(value.error || "订单同步失败");
     return mergeRemoteOrders(value.orders);
   }
@@ -107,7 +112,7 @@
     renderResult(apiParts(analysis, selectedId), "AI", scroll, `${cached ? "已复用缓存，未产生新的模型请求。" : "已由AI生成。"} 你购买的是“${currentProduct.name}”，页面只展示该商品包含的交付物。`);
   }
   function renderReading() {
-    const orders = readOrders(); elements.readingCount.textContent = `${orders.length} 条本机记录`; elements.readingEmpty.hidden = orders.length > 0;
+    const orders = readOrders(); elements.readingCount.textContent = `${orders.length} 条本机与账号记录`; elements.readingEmpty.hidden = orders.length > 0;
     elements.readingList.replaceChildren(...orders.map((order) => { const article = document.createElement("article"); const info = document.createElement("div"); const title = document.createElement("strong"); const meta = document.createElement("span"); const link = document.createElement("a"); title.textContent = order.paperTitle; meta.textContent = `${order.productName} · ¥${order.price} · ${order.status}`; link.href = `paper-analysis.html?id=${encodeURIComponent(order.paperId)}#analysis-result`; link.textContent = "重新打开 →"; info.append(title, meta); article.append(info, link); return article; }));
   }
   async function checkApi() {
@@ -118,7 +123,7 @@
       const productResponse = await fetch(`${apiBase}/api/products`); const catalog = await productResponse.json();
       if (productResponse.ok) catalog.products.forEach((serverProduct) => { const local = products.find((item) => item.id === serverProduct.id); if (local) { local.price = String(serverProduct.priceFen / 100); local.name = serverProduct.name; } });
       renderProducts(); renderCheckout(); const synced = await syncOrderHistory();
-      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `${value.aiMode === "mock" ? "无费用模拟AI" : `模型 ${value.model}`} · ${value.paymentMode === "mock" ? "模拟支付" : "等待支付回调"} · 已同步 ${synced} 个设备订单`;
+      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `${value.aiMode === "mock" ? "无费用模拟AI" : `模型 ${value.model}`} · ${value.paymentMode === "mock" ? "模拟支付" : "等待支付回调"} · 已同步 ${synced} 个${authToken() ? "账号" : "设备"}订单`;
     } catch (_) { elements.checkoutStatus.textContent = "本地AI服务未启动；当前使用演示模式。"; }
   }
   async function unlock() {
@@ -126,13 +131,13 @@
     if (!apiAvailable) { saveOrder("演示解锁", null); showDemo(true); renderReading(); return; }
     const original = elements.unlock.textContent; const deviceId = clientId(); elements.unlock.disabled = true; elements.unlock.textContent = "创建订单……"; elements.checkoutStatus.textContent = "正在创建一次性精读订单"; setCheckoutStep(0);
     try {
-      const createdResponse = await fetch(`${apiBase}/api/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: deviceId, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id }) });
+      const createdResponse = await fetch(`${apiBase}/api/orders`, { method: "POST", headers: apiHeaders(true), body: JSON.stringify({ clientId: deviceId, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id }) });
       const created = await createdResponse.json(); if (!createdResponse.ok) throw new Error(created.error || "订单创建失败");
       elements.unlock.textContent = "模拟支付确认……"; setCheckoutStep(1);
-      const paidResponse = await fetch(`${apiBase}/api/orders/${created.order.id}/mock-pay`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: deviceId }) });
+      const paidResponse = await fetch(`${apiBase}/api/orders/${created.order.id}/mock-pay`, { method: "POST", headers: apiHeaders(true), body: JSON.stringify({ clientId: deviceId }) });
       const paid = await paidResponse.json(); if (!paidResponse.ok) throw new Error(paid.error || "支付状态确认失败");
       elements.unlock.textContent = "AI生成中……"; elements.checkoutStatus.textContent = "订单已获得权益，正在生成，请勿重复提交"; setCheckoutStep(2);
-      const generatedResponse = await fetch(`${apiBase}/api/orders/${created.order.id}/generate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ clientId: deviceId, paper: { paperId: paper.id, title: paper.title, authors: paper.authors, abstract: paper.abstract } }) });
+      const generatedResponse = await fetch(`${apiBase}/api/orders/${created.order.id}/generate`, { method: "POST", headers: apiHeaders(true), body: JSON.stringify({ clientId: deviceId, paper: { paperId: paper.id, title: paper.title, authors: paper.authors, abstract: paper.abstract } }) });
       const generated = await generatedResponse.json(); if (!generatedResponse.ok) throw new Error(generated.error || "AI服务请求失败");
       saveOrder("AI已生成", generated.order.analysis, generated.order); showApiResult(generated.order.analysis, true, generated.order.cached, generated.order.productId); renderReading(); elements.checkoutStatus.textContent = generated.order.cached ? "订单完成 · 已复用缓存" : "订单完成 · AI精读生成成功"; setCheckoutStep(3);
     } catch (error) { elements.checkoutStatus.textContent = `${error.message}；你仍可关闭后端后使用演示模式。`; setCheckoutStep(Math.max(0, elements.checkoutSteps.findIndex((step) => step.classList.contains("is-active"))), true); }

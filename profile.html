@@ -21,8 +21,20 @@
     <section class="hero profile-hero">
       <p class="eyebrow">MY STUDENT RADAR</p>
       <h1><span id="profile-greeting">林小八</span>的<br><em>学生空间</em></h1>
-      <p>竞赛准备、论文精读和四六级估分集中在这里。当前记录只保存在这台设备。</p>
-      <div class="privacy-pill">不需要账号 · 不上传 · 可随时清除</div>
+      <p>竞赛准备、论文精读和四六级估分集中在这里。游客记录留在本机，登录后可跨设备恢复论文精读与院校档案。</p>
+      <div class="privacy-pill">游客可用 · 登录可同步 · 可随时退出</div>
+    </section>
+
+    <section class="account-card" aria-labelledby="account-heading">
+      <div class="account-copy"><p class="eyebrow">STUDENT ACCOUNT</p><h2 id="account-heading">同步账号</h2><p>用于跨设备恢复论文精读与院校档案。当前是 Web 内测账号，不等于院校认证。</p></div>
+      <form id="account-form" class="account-form">
+        <label class="field-label" for="account-email">邮箱</label><input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="name@example.com" required>
+        <label class="field-label" for="account-password">密码</label><input id="account-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="至少 8 个字符" required>
+        <label class="field-label" for="account-nickname">昵称（注册时使用）</label><input id="account-nickname" name="nickname" maxlength="20" value="林小八">
+        <div class="account-actions"><button id="account-login" class="estimate-button" type="button">登录</button><button id="account-register" class="secondary-button" type="submit">注册并登录</button></div>
+      </form>
+      <div id="account-session" class="account-session" hidden><span id="account-avatar">八</span><div><strong id="account-name">林小八</strong><small id="account-email-label"></small></div><button id="account-logout" class="secondary-button" type="button">退出登录</button></div>
+      <p id="account-status" class="copy-status" aria-live="polite">未登录，当前仍可作为游客使用</p>
     </section>
 
     <section class="profile-dashboard" aria-label="我的数据概览">
@@ -45,7 +57,7 @@
 
     <div class="profile-layout">
       <form id="profile-form" class="estimator-card">
-        <div class="section-head compact-head"><div><p class="eyebrow">YOUR PROFILE</p><h2>我的院校档案</h2></div><span class="badge badge-unmatched">未认证</span></div>
+        <div class="section-head compact-head"><div><p class="eyebrow">YOUR PROFILE</p><h2>我的院校档案</h2></div><span id="verification-badge" class="badge badge-unmatched">平台未认证</span></div>
         <label class="field-label" for="profile-nickname">昵称</label>
         <input id="profile-nickname" name="nickname" maxlength="20" value="林小八" required>
         <label class="field-label" for="profile-school">学校</label>
@@ -56,7 +68,7 @@
         <select id="profile-grade" name="grade" required><option>大一</option><option>大二</option><option selected>大三</option><option>大四</option><option>研究生</option><option>其他</option></select>
         <label class="field-label" for="profile-language">英文沟通</label>
         <select id="profile-language" name="language"><option>可以进行英文沟通</option><option>只能阅读基础英文</option><option>希望优先中文内容</option></select>
-        <button class="estimate-button" type="submit">保存到当前设备</button>
+        <button id="save-profile" class="estimate-button" type="submit">保存到当前设备</button>
         <button id="clear-profile" class="secondary-button" type="button">清除本地档案</button>
         <p class="form-note">不会收集学号、学生证、身份证、手机号或学校密码。</p>
       </form>
@@ -66,8 +78,8 @@
         <div class="avatar-mark">八</div>
         <h2 id="preview-name">林小八</h2>
         <p id="preview-school">福州大学 · 数字媒体技术 · 大三</p>
-        <div class="verification-state"><span>!</span><div><strong>院校身份未认证</strong><small>当前只是你在本机填写的资料，不代表福州大学官方确认。</small></div></div>
-        <div class="profile-benefits"><span>用于竞赛匹配</span><span>用于Pro建议</span><span>不上传服务器</span></div>
+        <div class="verification-state"><span>!</span><div><strong id="verification-title">院校身份未认证</strong><small id="verification-copy">当前只是你填写的资料，不代表福州大学官方确认。</small></div></div>
+        <div class="profile-benefits"><span>用于竞赛匹配</span><span>用于Pro建议</span><span id="profile-storage-label">游客状态仅保存在本机</span></div>
         <p id="profile-status" class="copy-status">尚未保存</p>
       </section>
     </div>
@@ -78,9 +90,9 @@
     </section>
   </main>
 
-  <footer><span>林小八制作 · 档案仅保存在当前设备</span><span><a href="index.html">竞赛</a> · <a href="pro.html">Pro简读</a> · <a href="privacy.html">隐私</a></span></footer>
+  <footer><span>林小八制作 · 游客本机保存，登录后安全同步</span><span><a href="index.html">竞赛</a> · <a href="pro.html">Pro简读</a> · <a href="privacy.html">隐私</a></span></footer>
   <script src="data/events.js"></script>
-  <script src="profile.js"></script>
+  <script src="config.js"></script><script src="profile.js"></script>
 </body>
 </html>
 

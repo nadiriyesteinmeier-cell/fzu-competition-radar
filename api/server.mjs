@@ -31,6 +31,9 @@ const productMap = new Map(products.map((item) => [item.id, item]));
 const cacheDir = path.join(config.dataDir, "cache");
 const ledgerPath = path.join(config.dataDir, "usage-ledger.json");
 const ordersPath = path.join(config.dataDir, "orders.json");
+const accountsPath = path.join(config.dataDir, "accounts.json");
+const sessionsPath = path.join(config.dataDir, "sessions.json");
+const loginFailures = new Map();
 fs.mkdirSync(cacheDir, { recursive: true });
 
 function loadEnv(file) {
@@ -65,33 +68,96 @@ function atomicWrite(file, value) {
 function readJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
 function readOrders() { const value = readJson(ordersPath, []); return Array.isArray(value) ? value : []; }
 function saveOrders(value) { atomicWrite(ordersPath, value.slice(-500)); }
+function readAccounts() { const value = readJson(accountsPath, []); return Array.isArray(value) ? value : []; }
+function saveAccounts(value) { atomicWrite(accountsPath, value.slice(-5000)); }
+function readSessions() { const value = readJson(sessionsPath, []); return Array.isArray(value) ? value : []; }
+function saveSessions(value) { atomicWrite(sessionsPath, value.filter((item) => Date.parse(item.expiresAt) > Date.now()).slice(-10000)); }
 function validClientId(value) { return typeof value === "string" && /^[A-Za-z0-9-]{16,80}$/.test(value); }
 function validPaperId(value) { return /^\d{4}\.\d{4,5}$/.test(String(value || "")); }
+function normalizeEmail(value) { const email = String(value || "").trim().toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : ""; }
+function validPassword(value) { return typeof value === "string" && value.length >= 8 && value.length <= 72; }
+function hash(value) { return crypto.createHash("sha256").update(value).digest("hex"); }
+function passwordHash(password, salt) { return crypto.scryptSync(password, salt, 64).toString("hex"); }
+function safeEqualHex(left, right) { try { const a = Buffer.from(left, "hex"); const b = Buffer.from(right, "hex"); return a.length === b.length && crypto.timingSafeEqual(a, b); } catch { return false; } }
+function cleanText(value, max) { const text = String(value || "").trim(); return text && text.length <= max ? text : ""; }
+function publicAccount(account) {
+  return { id: account.id, email: account.email, nickname: account.nickname, profile: account.profile || null, verification: account.verification || { status: "unverified", label: "平台未认证" }, createdAt: account.createdAt };
+}
+function normalizeProfile(input = {}, fallback = {}) {
+  const gradeOptions = new Set(["大一", "大二", "大三", "大四", "研究生", "其他"]);
+  const languageOptions = new Set(["可以进行英文沟通", "只能阅读基础英文", "希望优先中文内容"]);
+  const profile = {
+    nickname: cleanText(input.nickname ?? fallback.nickname, 20), school: cleanText(input.school ?? fallback.school, 80),
+    major: cleanText(input.major ?? fallback.major, 40), grade: String(input.grade ?? fallback.grade ?? ""), language: String(input.language ?? fallback.language ?? "")
+  };
+  if (!profile.nickname || !profile.school || !profile.major || !gradeOptions.has(profile.grade) || !languageOptions.has(profile.language)) throw new HttpError(400, "院校档案内容无效", "invalid_profile");
+  return { ...profile, savedAt: new Date().toISOString() };
+}
+function createSession(accountId) {
+  const token = crypto.randomBytes(32).toString("base64url");
+  const sessions = readSessions(); sessions.push({ tokenHash: hash(token), accountId, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 30 * 86400000).toISOString() }); saveSessions(sessions);
+  return token;
+}
+function bearerToken(req) { const match = String(req.headers.authorization || "").match(/^Bearer\s+([A-Za-z0-9_-]{32,200})$/); return match?.[1] || ""; }
+function authenticate(req, required = true) {
+  const token = bearerToken(req); if (!token) { if (required) throw new HttpError(401, "请先登录", "authentication_required"); return null; }
+  const session = readSessions().find((item) => item.tokenHash === hash(token) && Date.parse(item.expiresAt) > Date.now());
+  const account = session && readAccounts().find((item) => item.id === session.accountId);
+  if (!account) throw new HttpError(401, "登录状态已失效，请重新登录", "invalid_session");
+  return account;
+}
+function register(input) {
+  const email = normalizeEmail(input.email); const password = input.password; const nickname = cleanText(input.nickname, 20);
+  if (!email) throw new HttpError(400, "邮箱格式无效", "invalid_email");
+  if (!validPassword(password)) throw new HttpError(400, "密码需为 8—72 个字符", "invalid_password");
+  if (!nickname) throw new HttpError(400, "昵称需为 1—20 个字符", "invalid_nickname");
+  const accounts = readAccounts(); if (accounts.some((item) => item.email === email)) throw new HttpError(409, "该邮箱已注册", "email_exists");
+  const salt = crypto.randomBytes(16).toString("hex"); const account = { id: crypto.randomUUID(), email, nickname, passwordSalt: salt, passwordHash: passwordHash(password, salt), verification: { status: "unverified", label: "平台未认证" }, createdAt: new Date().toISOString() };
+  accounts.push(account); saveAccounts(accounts); return { account, token: createSession(account.id) };
+}
+function login(input) {
+  const email = normalizeEmail(input.email); const password = input.password;
+  const failure = loginFailures.get(email || "invalid") || { count: 0, resetAt: 0 };
+  if (failure.resetAt > Date.now() && failure.count >= 6) throw new HttpError(429, "登录尝试过多，请 10 分钟后再试", "login_rate_limited");
+  if (!email || !validPassword(password)) throw new HttpError(401, "邮箱或密码错误", "invalid_credentials");
+  const account = readAccounts().find((item) => item.email === email);
+  if (!account || !safeEqualHex(passwordHash(password, account.passwordSalt), account.passwordHash)) { loginFailures.set(email, { count: failure.resetAt > Date.now() ? failure.count + 1 : 1, resetAt: Date.now() + 10 * 60000 }); throw new HttpError(401, "邮箱或密码错误", "invalid_credentials"); }
+  loginFailures.delete(email);
+  return { account, token: createSession(account.id) };
+}
+function logout(req) { const token = bearerToken(req); if (!token) return; saveSessions(readSessions().filter((item) => item.tokenHash !== hash(token))); }
+function saveProfile(accountId, input) {
+  const accounts = readAccounts(); const index = accounts.findIndex((item) => item.id === accountId); if (index < 0) throw new HttpError(404, "账号不存在", "account_not_found");
+  const profile = normalizeProfile(input, accounts[index].profile || {}); accounts[index].nickname = profile.nickname; accounts[index].profile = profile; saveAccounts(accounts); return accounts[index];
+}
+function ownerFor(req, clientId) {
+  const account = authenticate(req, false); if (account) return { type: "account", id: account.id };
+  if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
+  return { type: "device", id: clientId };
+}
+function ownedBy(order, owner) { return owner.type === "account" ? order.accountId === owner.id : !order.accountId && order.clientId === owner.id; }
 function publicOrder(order) {
   return { id: order.id, paperId: order.paperId, paperTitle: order.paperTitle, productId: order.productId, productName: order.productName, priceFen: order.priceFen, status: order.status, createdAt: order.createdAt, paidAt: order.paidAt || null, completedAt: order.completedAt || null, analysis: order.status === "completed" ? order.analysis : null, cached: Boolean(order.cached) };
 }
-function findOrder(id, clientId) {
-  if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
-  const orders = readOrders(); const index = orders.findIndex((item) => item.id === id && item.clientId === clientId);
+function findOrder(id, owner) {
+  const orders = readOrders(); const index = orders.findIndex((item) => item.id === id && ownedBy(item, owner));
   if (index < 0) throw new HttpError(404, "订单不存在", "order_not_found");
   return { orders, index, order: orders[index] };
 }
-function listOrders(clientId) {
-  if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
-  return readOrders().filter((item) => item.clientId === clientId).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30).map(publicOrder);
+function listOrders(owner) {
+  return readOrders().filter((item) => ownedBy(item, owner)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 30).map(publicOrder);
 }
-function createOrder(input) {
-  if (!validClientId(input.clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
+function createOrder(input, owner) {
   if (!validPaperId(input.paperId)) throw new HttpError(400, "论文编号无效", "invalid_paper");
   const product = productMap.get(String(input.productId || ""));
   if (!product) throw new HttpError(400, "商品不存在", "invalid_product");
   const title = String(input.paperTitle || "").trim(); if (!title || title.length > 500) throw new HttpError(400, "论文标题无效", "invalid_title");
-  const order = { id: crypto.randomUUID(), clientId: input.clientId, paperId: String(input.paperId), paperTitle: title, productId: product.id, productName: product.name, priceFen: product.priceFen, status: "pending_payment", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() };
+  const order = { id: crypto.randomUUID(), ...(owner.type === "account" ? { accountId: owner.id } : { clientId: owner.id }), paperId: String(input.paperId), paperTitle: title, productId: product.id, productName: product.name, priceFen: product.priceFen, status: "pending_payment", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() };
   const orders = readOrders(); orders.push(order); saveOrders(orders); return order;
 }
-function payMock(id, clientId) {
+function payMock(id, owner) {
   if (!config.mockPayment) throw new HttpError(403, "模拟支付已关闭", "mock_payment_disabled");
-  const found = findOrder(id, clientId); const { order } = found;
+  const found = findOrder(id, owner); const { order } = found;
   if (order.status === "pending_payment") { order.status = "paid"; order.paidAt = new Date().toISOString(); found.orders[found.index] = order; saveOrders(found.orders); }
   if (!["paid", "processing", "completed"].includes(order.status)) throw new HttpError(409, "订单当前状态无法支付", "invalid_order_state");
   return order;
@@ -157,31 +223,36 @@ async function analyze(input) {
   let result; try { result = JSON.parse(payload.output_text); } catch { throw new HttpError(502, "AI返回结果无法解析", "invalid_ai_output"); }
   const stored = { paperId: input.paperId, service: input.service, model: config.model, generatedAt: new Date().toISOString(), analysis: result }; atomicWrite(file, stored); recordUsage(payload.usage); return { ...stored, cached: false };
 }
-async function generateOrder(id, clientId, input) {
-  let found = findOrder(id, clientId); let order = found.order;
+async function generateOrder(id, owner, input) {
+  let found = findOrder(id, owner); let order = found.order;
   if (order.status === "completed") return order;
   if (order.status !== "paid") throw new HttpError(402, "订单尚未获得生成权益", "payment_required");
   const clean = validatePaper(input, order); order.status = "processing"; found.orders[found.index] = order; saveOrders(found.orders);
   try {
-    const result = await analyze(clean); found = findOrder(id, clientId); order = found.order; order.status = "completed"; order.completedAt = new Date().toISOString(); order.analysis = result.analysis; order.cached = result.cached; found.orders[found.index] = order; saveOrders(found.orders); return order;
+    const result = await analyze(clean); found = findOrder(id, owner); order = found.order; order.status = "completed"; order.completedAt = new Date().toISOString(); order.analysis = result.analysis; order.cached = result.cached; found.orders[found.index] = order; saveOrders(found.orders); return order;
   } catch (error) {
-    found = findOrder(id, clientId); order = found.order; order.status = "paid"; order.lastErrorCode = error.code || "generation_failed"; found.orders[found.index] = order; saveOrders(found.orders); throw error;
+    found = findOrder(id, owner); order = found.order; order.status = "paid"; order.lastErrorCode = error.code || "generation_failed"; found.orders[found.index] = order; saveOrders(found.orders); throw error;
   }
 }
 
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin || ""; const url = new URL(req.url, "http://localhost");
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
-  if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-allow-headers": "content-type", vary: "Origin" }); return res.end(); }
+  if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "account_or_device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
-    if (req.method === "GET" && url.pathname === "/api/orders") return json(res, 200, { orders: listOrders(url.searchParams.get("clientId")), identityMode: "device" }, origin);
-    if (req.method === "POST" && url.pathname === "/api/orders") return json(res, 201, { order: publicOrder(createOrder(await body(req))) }, origin);
+    if (req.method === "POST" && url.pathname === "/api/auth/register") { const result = register(await body(req)); return json(res, 201, { account: publicAccount(result.account), token: result.token }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/auth/login") { const result = login(await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/auth/logout") { authenticate(req); logout(req); return json(res, 200, { ok: true }, origin); }
+    if (req.method === "GET" && url.pathname === "/api/auth/me") return json(res, 200, { account: publicAccount(authenticate(req)) }, origin);
+    if (req.method === "PUT" && url.pathname === "/api/me/profile") { const account = authenticate(req); return json(res, 200, { account: publicAccount(saveProfile(account.id, await body(req))) }, origin); }
+    if (req.method === "GET" && url.pathname === "/api/orders") { const owner = ownerFor(req, url.searchParams.get("clientId")); return json(res, 200, { orders: listOrders(owner), identityMode: owner.type }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/orders") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 201, { order: publicOrder(createOrder(input, owner)) }, origin); }
     const match = url.pathname.match(/^\/api\/orders\/([0-9a-f-]+)(?:\/(mock-pay|generate))?$/i);
-    if (match && req.method === "GET" && !match[2]) return json(res, 200, { order: publicOrder(findOrder(match[1], url.searchParams.get("clientId")).order) }, origin);
-    if (match && req.method === "POST" && match[2] === "mock-pay") { const input = await body(req); return json(res, 200, { order: publicOrder(payMock(match[1], input.clientId)) }, origin); }
-    if (match && req.method === "POST" && match[2] === "generate") { const input = await body(req); return json(res, 200, { order: publicOrder(await generateOrder(match[1], input.clientId, input.paper || {})) }, origin); }
+    if (match && req.method === "GET" && !match[2]) { const owner = ownerFor(req, url.searchParams.get("clientId")); return json(res, 200, { order: publicOrder(findOrder(match[1], owner).order) }, origin); }
+    if (match && req.method === "POST" && match[2] === "mock-pay") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 200, { order: publicOrder(payMock(match[1], owner)) }, origin); }
+    if (match && req.method === "POST" && match[2] === "generate") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 200, { order: publicOrder(await generateOrder(match[1], owner, input.paper || {})) }, origin); }
     return json(res, 404, { error: "接口不存在", code: "not_found" }, origin);
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500; console.error(JSON.stringify({ at: new Date().toISOString(), status, code: error.code || "internal", message: error.message }));

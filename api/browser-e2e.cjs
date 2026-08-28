@@ -6,11 +6,18 @@ if (!runtimeModules) throw new Error("PLAYWRIGHT_MODULE_PATH is required");
 const runtimeRequire = createRequire(path.join(runtimeModules, "package.json"));
 const { chromium, devices } = runtimeRequire("playwright");
 const siteBase = String(process.env.E2E_SITE_BASE || "http://127.0.0.1:8765").replace(/\/$/, "");
+const apiBase = String(process.env.E2E_API_BASE || "http://127.0.0.1:8787").replace(/\/$/, "");
+
+async function routeLocalConfig(page) {
+  if (process.env.E2E_LIVE === "true") return;
+  await page.route("**/config.js", (route) => route.fulfill({ contentType: "application/javascript", body: `window.STUDENT_RADAR_CONFIG=Object.freeze({apiBase:${JSON.stringify(apiBase)}});` }));
+}
 
 async function run(name, contextOptions, productName, expectedHeading, forbiddenHeading, screenshotPath) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
-  const context = await browser.newContext(contextOptions);
+  const context = await browser.newContext({ ...contextOptions, serviceWorkers: "block" });
   const page = await context.newPage();
+  await routeLocalConfig(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -38,6 +45,26 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   return { name, productName, readingCount: count.trim(), restored: restoredCount.trim(), checkoutSteps: stepsDone, headings: headings.length };
 }
 
+async function runAccount() {
+  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, serviceWorkers: "block" });
+  const page = await context.newPage(); const errors = [];
+  await routeLocalConfig(page);
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  const email = `e2e-${Date.now()}@example.com`;
+  await page.goto(`${siteBase}/profile.html`, { waitUntil: "networkidle" });
+  await page.locator("#account-email").fill(email); await page.locator("#account-password").fill("test-account-2026"); await page.locator("#account-nickname").fill("跨设备同学");
+  await page.locator("#account-register").click(); await page.getByText("已登录；论文精读与院校档案可跨设备恢复").waitFor();
+  await page.locator("#profile-major").fill("数字媒体技术"); await page.locator("#profile-form").getByRole("button", { name: "保存并同步档案" }).click();
+  await page.getByText("档案已安全同步").waitFor(); await page.reload({ waitUntil: "networkidle" });
+  await page.locator("#account-email-label").getByText(email).waitFor();
+  if (await page.locator("#profile-major").inputValue() !== "数字媒体技术") throw new Error("account: synchronized profile was not restored");
+  if (errors.length) throw new Error(`account: browser errors: ${errors.join(" | ")}`);
+  await page.screenshot({ path: path.join(process.env.E2E_OUTPUT_DIR || process.cwd(), "profile-account-desktop.png"), fullPage: true });
+  await browser.close(); return { name: "account-profile", registered: true, profileRestored: true };
+}
+
 (async () => {
   const outputDir = process.env.E2E_OUTPUT_DIR || process.cwd();
   const results = [];
@@ -52,6 +79,7 @@ async function run(name, contextOptions, productName, expectedHeading, forbidden
   results.push(await run("desktop-deep", desktop, "深度解读", "复现准备", "作者摘要中文阅读版"));
   results.push(await run("desktop-translate", desktop, "中文阅读版", "作者摘要中文阅读版", "关键结果"));
   results.push(await run("mobile-innovation", { ...devices["iPhone 13"] }, "创新点提取", "必须核验的问题", "方法路线", path.join(outputDir, "paper-analysis-mobile.png")));
+  results.push(await runAccount());
   process.stdout.write(`${JSON.stringify(results)}\n`);
 })().catch((error) => {
   process.stderr.write(`${error.stack || error.message}\n`);
