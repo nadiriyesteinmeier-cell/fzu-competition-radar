@@ -479,6 +479,17 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .account-session strong, .account-session small { display: block; }
 .account-session small { margin-top: 3px; color: var(--muted); }
 .account-session button { margin: 0; }
+.account-security { grid-column: 2; display: grid; gap: 7px; }
+.account-security[hidden] { display: none; }
+.account-security details { padding: 13px 15px; border: 1px solid var(--line); border-radius: 14px; }
+.account-security summary { cursor: pointer; font-weight: 750; }
+.account-security form { display: grid; gap: 8px; margin-top: 12px; }
+.account-security input[type="password"] { width: 100%; min-height: 44px; padding: 9px 11px; }
+.account-security form button { margin: 0; }
+.danger-zone { border-color: #f0c9c4 !important; background: #fff9f8; }
+.danger-zone form p, .danger-zone form label { margin: 0; color: #8a4137; font-size: 11px; line-height: 1.7; }
+.danger-zone form label { display: flex; gap: 8px; align-items: center; }
+.danger-zone form button { min-height: 44px; color: white; border: 0; border-radius: 12px; background: #9f3025; font-weight: 750; }
 .account-card > .copy-status { grid-column: 2; margin: 0; }
 .profile-layout .estimator-card input { width: 100%; min-height: 48px; padding: 10px 12px; }
 .secondary-button { width: 100%; margin-top: 9px; padding: 12px; color: #555d51; background: transparent; border: 1px solid var(--line); border-radius: 11px; cursor: pointer; }
@@ -533,7 +544,7 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 @media (max-width: 760px) {
   .pro-teaser { align-items: flex-start; flex-direction: column; padding: 20px; }
   .pro-title-card, .brief-layout, .profile-layout, .account-card { grid-template-columns: 1fr; }
-  .account-session, .account-card > .copy-status { grid-column: 1; }
+  .account-session, .account-security, .account-card > .copy-status { grid-column: 1; }
   .brief-library { display: flex; margin-inline: -12px; padding-inline: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
   .brief-library-card { flex: 0 0 78vw; scroll-snap-align: center; }
   .brief-library-section .section-head { align-items: flex-start; flex-direction: column; gap: 4px; }

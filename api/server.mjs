@@ -130,6 +130,21 @@ function saveProfile(accountId, input) {
   const accounts = readAccounts(); const index = accounts.findIndex((item) => item.id === accountId); if (index < 0) throw new HttpError(404, "账号不存在", "account_not_found");
   const profile = normalizeProfile(input, accounts[index].profile || {}); accounts[index].nickname = profile.nickname; accounts[index].profile = profile; saveAccounts(accounts); return accounts[index];
 }
+function verifyPassword(account, password) { return validPassword(password) && safeEqualHex(passwordHash(password, account.passwordSalt), account.passwordHash); }
+function changePassword(accountId, input) {
+  const accounts = readAccounts(); const index = accounts.findIndex((item) => item.id === accountId); if (index < 0) throw new HttpError(404, "账号不存在", "account_not_found");
+  const currentPassword = input.currentPassword; const newPassword = input.newPassword;
+  if (!verifyPassword(accounts[index], currentPassword)) throw new HttpError(401, "当前密码错误", "invalid_current_password");
+  if (!validPassword(newPassword)) throw new HttpError(400, "新密码需为 8—72 个字符", "invalid_password");
+  if (currentPassword === newPassword) throw new HttpError(400, "新密码不能与当前密码相同", "password_unchanged");
+  const salt = crypto.randomBytes(16).toString("hex"); accounts[index].passwordSalt = salt; accounts[index].passwordHash = passwordHash(newPassword, salt); accounts[index].passwordChangedAt = new Date().toISOString(); saveAccounts(accounts);
+  saveSessions(readSessions().filter((item) => item.accountId !== accountId)); return { account: accounts[index], token: createSession(accountId) };
+}
+function deleteAccount(accountId, input) {
+  const accounts = readAccounts(); const account = accounts.find((item) => item.id === accountId); if (!account) throw new HttpError(404, "账号不存在", "account_not_found");
+  if (!verifyPassword(account, input.password)) throw new HttpError(401, "密码错误，账号未删除", "invalid_current_password");
+  saveAccounts(accounts.filter((item) => item.id !== accountId)); saveSessions(readSessions().filter((item) => item.accountId !== accountId)); saveOrders(readOrders().filter((item) => item.accountId !== accountId)); return true;
+}
 function ownerFor(req, clientId) {
   const account = authenticate(req, false); if (account) return { type: "account", id: account.id };
   if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
@@ -238,7 +253,7 @@ async function generateOrder(id, owner, input) {
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin || ""; const url = new URL(req.url, "http://localhost");
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
-  if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
+  if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
   try {
     if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "account_or_device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
@@ -247,6 +262,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && url.pathname === "/api/auth/logout") { authenticate(req); logout(req); return json(res, 200, { ok: true }, origin); }
     if (req.method === "GET" && url.pathname === "/api/auth/me") return json(res, 200, { account: publicAccount(authenticate(req)) }, origin);
     if (req.method === "PUT" && url.pathname === "/api/me/profile") { const account = authenticate(req); return json(res, 200, { account: publicAccount(saveProfile(account.id, await body(req))) }, origin); }
+    if (req.method === "PUT" && url.pathname === "/api/me/password") { const account = authenticate(req); const result = changePassword(account.id, await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
+    if (req.method === "DELETE" && url.pathname === "/api/me") { const account = authenticate(req); deleteAccount(account.id, await body(req)); return json(res, 200, { deleted: true }, origin); }
     if (req.method === "GET" && url.pathname === "/api/orders") { const owner = ownerFor(req, url.searchParams.get("clientId")); return json(res, 200, { orders: listOrders(owner), identityMode: owner.type }, origin); }
     if (req.method === "POST" && url.pathname === "/api/orders") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 201, { order: publicOrder(createOrder(input, owner)) }, origin); }
     const match = url.pathname.match(/^\/api\/orders\/([0-9a-f-]+)(?:\/(mock-pay|generate))?$/i);

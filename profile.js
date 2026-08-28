@@ -10,7 +10,7 @@
   const fields = { nickname: document.querySelector("#profile-nickname"), school: document.querySelector("#profile-school"), major: document.querySelector("#profile-major"), grade: document.querySelector("#profile-grade"), language: document.querySelector("#profile-language") };
   const name = document.querySelector("#preview-name"); const greeting = document.querySelector("#profile-greeting"); const school = document.querySelector("#preview-school");
   const status = document.querySelector("#profile-status"); const workspaceStatus = document.querySelector("#workspace-status"); const accountStatus = document.querySelector("#account-status");
-  const accountForm = document.querySelector("#account-form"); const accountSession = document.querySelector("#account-session");
+  const accountForm = document.querySelector("#account-form"); const accountSession = document.querySelector("#account-session"); const accountSecurity = document.querySelector("#account-security");
   let auth = read(keys.auth, null); let serverOrders = [];
 
   function read(key, fallback) { try { const value = JSON.parse(localStorage.getItem(key) || "null"); return value ?? fallback; } catch (_) { return fallback; } }
@@ -32,7 +32,7 @@
   function preview() { const nickname = fields.nickname.value.trim() || "同学"; name.textContent = nickname; greeting.textContent = nickname; school.textContent = `${fields.school.value} · ${fields.major.value.trim() || "未填写专业"} · ${fields.grade.value}`; }
   function renderAccount() {
     const account = auth?.account; const loggedIn = Boolean(auth?.token && account);
-    accountForm.hidden = loggedIn; accountSession.hidden = !loggedIn;
+    accountForm.hidden = loggedIn; accountSession.hidden = !loggedIn; accountSecurity.hidden = !loggedIn;
     document.querySelector("#save-profile").textContent = loggedIn ? "保存并同步档案" : "保存到当前设备";
     document.querySelector("#profile-storage-label").textContent = loggedIn ? "档案已启用账号同步" : "游客状态仅保存在本机";
     document.querySelector("#verification-badge").textContent = account?.verification?.label || "平台未认证";
@@ -78,6 +78,15 @@
   accountForm.addEventListener("submit", (event) => { event.preventDefault(); authenticate("register"); });
   document.querySelector("#account-login").addEventListener("click", () => authenticate("login"));
   document.querySelector("#account-logout").addEventListener("click", async () => { try { await api("/api/auth/logout", { method: "POST", body: "{}" }); } catch (_) {} saveAuth(null); serverOrders = []; renderWorkspace(); status.textContent = "已退出；本机档案仍保留"; });
+  document.querySelector("#password-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const passwordForm = event.currentTarget; const currentPassword = document.querySelector("#current-password").value; const newPassword = document.querySelector("#new-password").value; accountStatus.textContent = "正在更新密码……";
+    try { const value = await api("/api/me/password", { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) }); saveAuth({ token: value.token, account: value.account }); passwordForm.reset(); accountStatus.textContent = "密码已更新，其他设备上的旧会话已退出"; } catch (error) { accountStatus.textContent = error.message; }
+  });
+  document.querySelector("#delete-account-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const deleteForm = event.currentTarget; if (!document.querySelector("#delete-confirm").checked || !window.confirm("最后确认：永久删除账号、同步档案和账号论文订单？")) return;
+    const password = document.querySelector("#delete-password").value; accountStatus.textContent = "正在删除账号数据……";
+    try { await api("/api/me", { method: "DELETE", body: JSON.stringify({ password }) }); saveAuth(null); serverOrders = []; deleteForm.reset(); renderWorkspace(); accountStatus.textContent = "账号与云端数据已永久删除；本机游客数据仍保留"; } catch (error) { accountStatus.textContent = error.message; }
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault(); const profile = { ...currentProfile(), savedAt: new Date().toISOString() }; localStorage.setItem(keys.profile, JSON.stringify(profile)); preview();
     if (!auth?.token) { status.textContent = "已保存到当前设备；院校状态仍为未认证"; return; }

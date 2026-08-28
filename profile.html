@@ -34,6 +34,10 @@
         <div class="account-actions"><button id="account-login" class="estimate-button" type="button">登录</button><button id="account-register" class="secondary-button" type="submit">注册并登录</button></div>
       </form>
       <div id="account-session" class="account-session" hidden><span id="account-avatar">八</span><div><strong id="account-name">林小八</strong><small id="account-email-label"></small></div><button id="account-logout" class="secondary-button" type="button">退出登录</button></div>
+      <div id="account-security" class="account-security" hidden>
+        <details><summary>修改密码</summary><form id="password-form"><input id="current-password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="当前密码" required><input id="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="新密码，至少 8 个字符" required><button class="secondary-button" type="submit">更新密码并退出其他会话</button></form></details>
+        <details class="danger-zone"><summary>删除账号与云端数据</summary><form id="delete-account-form"><p>会永久删除账号、同步档案和该账号的论文订单，无法恢复。本机游客数据不会被删除。</p><input id="delete-password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="输入密码确认" required><label><input id="delete-confirm" type="checkbox" required> 我确认永久删除账号数据</label><button type="submit">永久删除账号</button></form></details>
+      </div>
       <p id="account-status" class="copy-status" aria-live="polite">未登录，当前仍可作为游客使用</p>
     </section>
 

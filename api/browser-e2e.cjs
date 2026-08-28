@@ -62,7 +62,12 @@ async function runAccount() {
   if (await page.locator("#profile-major").inputValue() !== "数字媒体技术") throw new Error("account: synchronized profile was not restored");
   if (errors.length) throw new Error(`account: browser errors: ${errors.join(" | ")}`);
   await page.screenshot({ path: path.join(process.env.E2E_OUTPUT_DIR || process.cwd(), "profile-account-desktop.png"), fullPage: true });
-  await browser.close(); return { name: "account-profile", registered: true, profileRestored: true };
+  await page.getByText("修改密码", { exact: true }).click(); await page.locator("#current-password").fill("test-account-2026"); await page.locator("#new-password").fill("test-account-updated-2026"); await page.locator("#password-form").getByRole("button").click();
+  await page.waitForTimeout(1200); const passwordStatus = await page.locator("#account-status").textContent(); if (!passwordStatus?.includes("密码已更新")) throw new Error(`account: password update failed (${passwordStatus})`);
+  await page.getByText("删除账号与云端数据", { exact: true }).click(); await page.locator("#delete-password").fill("test-account-updated-2026"); await page.locator("#delete-confirm").check();
+  page.once("dialog", (dialog) => dialog.accept()); await page.locator("#delete-account-form").getByRole("button", { name: "永久删除账号" }).click(); await page.getByText("账号与云端数据已永久删除").waitFor();
+  if (!(await page.locator("#account-form").isVisible())) throw new Error("account: registration form did not return after deletion");
+  await browser.close(); return { name: "account-profile", registered: true, profileRestored: true, passwordChanged: true, accountDeleted: true };
 }
 
 (async () => {

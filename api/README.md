@@ -27,6 +27,8 @@ npm start
 - `POST /api/auth/register`：邮箱、8—72 字符密码和昵称注册，返回一次会话令牌。
 - `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`：登录、退出和恢复会话。
 - `PUT /api/me/profile`：登录后同步昵称、学校、专业、年级和英文沟通偏好。
+- `PUT /api/me/password`：校验当前密码后更新密码，并撤销该账号的其他全部会话。
+- `DELETE /api/me`：再次校验密码后永久删除账号、会话、同步档案和账号订单。
 - 登录请求通过 `Authorization: Bearer <token>` 访问账号订单；未登录时仍兼容随机设备 `clientId`。
 
 账号档案中的院校状态默认是“平台未认证”。当前不收集学号、学生证或学校密码，也没有开放人工认证；该账号系统只用于 Web 内测和跨设备恢复，不能直接视为微信小程序正式身份体系。

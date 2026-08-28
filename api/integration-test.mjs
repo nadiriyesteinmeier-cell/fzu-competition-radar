@@ -75,9 +75,19 @@ try {
   assert(accountHistory.response.ok && accountHistory.value.identityMode === "account" && accountHistory.value.orders.length === 1, "Cross-device account history failed");
   const deviceCannotReadAccountOrder = await request(`/api/orders/${accountOrder.value.order.id}?clientId=${clientId}`);
   assert(deviceCannotReadAccountOrder.response.status === 404, "Account order leaked to device identity");
-  const loggedOut = await request("/api/auth/logout", { method: "POST", headers: authHeaders, body: "{}" }); assert(loggedOut.response.ok, "Logout failed");
-  const expiredMe = await request("/api/auth/me", { headers: authHeaders }); assert(expiredMe.response.status === 401, "Logout session remained active");
-  console.log(JSON.stringify({ health: "ok", products: 4, accounts: "session-backed", profiles: "server-backed", productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "account-and-device-isolated", ownership: "ok" }));
+  const wrongPasswordChange = await request("/api/me/password", { method: "PUT", headers: authHeaders, body: JSON.stringify({ currentPassword: "wrong-password", newPassword: "new-correct-horse-2026" }) });
+  assert(wrongPasswordChange.response.status === 401, "Password confirmation guard failed");
+  const changed = await request("/api/me/password", { method: "PUT", headers: authHeaders, body: JSON.stringify({ currentPassword: "correct-horse-2026", newPassword: "new-correct-horse-2026" }) });
+  assert(changed.response.ok && changed.value.token, "Password change failed");
+  const revokedMe = await request("/api/auth/me", { headers: authHeaders }); assert(revokedMe.response.status === 401, "Old session survived password change");
+  const oldLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026" }) }); assert(oldLogin.response.status === 401, "Old password survived password change");
+  const newLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "new-correct-horse-2026" }) }); assert(newLogin.response.ok, "New password login failed");
+  const deleteHeaders = { "content-type": "application/json", authorization: `Bearer ${newLogin.value.token}` };
+  const wrongDelete = await request("/api/me", { method: "DELETE", headers: deleteHeaders, body: JSON.stringify({ password: "wrong-password" }) }); assert(wrongDelete.response.status === 401, "Account deletion password guard failed");
+  const deleted = await request("/api/me", { method: "DELETE", headers: deleteHeaders, body: JSON.stringify({ password: "new-correct-horse-2026" }) }); assert(deleted.response.ok && deleted.value.deleted, "Account deletion failed");
+  const deletedLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "new-correct-horse-2026" }) }); assert(deletedLogin.response.status === 401, "Deleted account could still log in");
+  const deletedOrders = JSON.parse(fs.readFileSync(path.join(dataDir, "orders.json"), "utf8")); assert(!deletedOrders.some((item) => item.accountId === registered.value.account.id), "Deleted account orders remained on disk");
+  console.log(JSON.stringify({ health: "ok", products: 4, accounts: "session-backed", profiles: "server-backed", passwordChange: "revokes-sessions", accountDeletion: "removes-account-and-orders", productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "account-and-device-isolated", ownership: "ok" }));
 } finally {
   child.kill();
   await new Promise((resolve) => child.once("exit", resolve));
