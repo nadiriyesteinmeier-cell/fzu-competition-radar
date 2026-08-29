@@ -471,6 +471,13 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .account-form .field-label { align-self: end; }
 .account-form input { width: 100%; min-height: 46px; padding: 10px 12px; }
 .account-form label[for="account-nickname"], .account-form #account-nickname, .account-actions { grid-column: 1 / -1; }
+.account-text-button { grid-column: 1 / -1; justify-self: start; padding: 5px 0; color: var(--lime-dark); border: 0; background: transparent; font-size: 12px; font-weight: 750; cursor: pointer; }
+.account-recovery { grid-column: 2; display: grid; gap: 10px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); }
+.account-recovery[hidden] { display: none; }
+.account-recovery p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.account-recovery input { width: 100%; min-height: 46px; padding: 10px 12px; }
+.account-recovery .account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.account-recovery button, .account-recovery a { margin: 0; text-align: center; }
 .account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
 .account-actions button { margin: 0; }
 .account-session { grid-column: 2; display: grid; grid-template-columns: auto 1fr auto; gap: 13px; align-items: center; padding: 17px; border-radius: 18px; background: var(--soft); }
@@ -486,6 +493,10 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 .account-security form { display: grid; gap: 8px; margin-top: 12px; }
 .account-security input[type="password"] { width: 100%; min-height: 44px; padding: 9px 11px; }
 .account-security form button { margin: 0; }
+.email-verification-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-top: 12px; }
+.email-verification-row strong, .email-verification-row small { display: block; }
+.email-verification-row small { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.email-verification-row button { margin: 0; }
 .danger-zone { border-color: #f0c9c4 !important; background: #fff9f8; }
 .danger-zone form p, .danger-zone form label { margin: 0; color: #8a4137; font-size: 11px; line-height: 1.7; }
 .danger-zone form label { display: flex; gap: 8px; align-items: center; }
@@ -544,7 +555,7 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
 @media (max-width: 760px) {
   .pro-teaser { align-items: flex-start; flex-direction: column; padding: 20px; }
   .pro-title-card, .brief-layout, .profile-layout, .account-card { grid-template-columns: 1fr; }
-  .account-session, .account-security, .account-card > .copy-status { grid-column: 1; }
+  .account-session, .account-security, .account-recovery, .account-card > .copy-status { grid-column: 1; }
   .brief-library { display: flex; margin-inline: -12px; padding-inline: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
   .brief-library-card { flex: 0 0 78vw; scroll-snap-align: center; }
   .brief-library-section .section-head { align-items: flex-start; flex-direction: column; gap: 4px; }
@@ -557,6 +568,7 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .profile-dashboard { grid-template-columns: 1fr 1fr; }
   .account-form { grid-template-columns: 1fr; }
   .account-form label, .account-form input, .account-actions { grid-column: 1; }
+  .account-recovery .account-actions, .email-verification-row { grid-template-columns: 1fr; }
   .account-actions { grid-template-columns: 1fr; }
   .workspace-grid { grid-template-columns: 1fr; }
 }
@@ -694,4 +706,3 @@ footer { display: flex; justify-content: space-between; gap: 15px; max-width: 11
   .analysis-result-grid article:first-child { grid-column: auto; }
   .reading-list article { align-items: flex-start; flex-direction: column; }
 }
-

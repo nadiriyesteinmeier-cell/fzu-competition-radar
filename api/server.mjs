@@ -18,7 +18,11 @@ const config = {
   mockAi: booleanEnv("AI_MOCK_MODE", false),
   mockPayment: booleanEnv("ENABLE_MOCK_PAYMENT", apiHost !== "0.0.0.0"),
   dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(here, "data"),
-  origins: new Set((process.env.ALLOWED_ORIGINS || "http://127.0.0.1:8765,http://localhost:8765").split(",").map((item) => item.trim()).filter(Boolean))
+  origins: new Set((process.env.ALLOWED_ORIGINS || "http://127.0.0.1:8765,http://localhost:8765").split(",").map((item) => item.trim()).filter(Boolean)),
+  appBaseUrl: String(process.env.APP_BASE_URL || "http://127.0.0.1:8765").replace(/\/$/, ""),
+  emailMode: /^(?:resend|preview|disabled)$/.test(process.env.EMAIL_DELIVERY_MODE || "") ? process.env.EMAIL_DELIVERY_MODE : (apiHost === "0.0.0.0" ? "disabled" : "preview"),
+  emailFrom: process.env.EMAIL_FROM || "林小八竞赛雷达 <onboarding@resend.dev>",
+  exposeEmailPreview: booleanEnv("EMAIL_EXPOSE_PREVIEW", false)
 };
 
 const products = Object.freeze([
@@ -33,7 +37,9 @@ const ledgerPath = path.join(config.dataDir, "usage-ledger.json");
 const ordersPath = path.join(config.dataDir, "orders.json");
 const accountsPath = path.join(config.dataDir, "accounts.json");
 const sessionsPath = path.join(config.dataDir, "sessions.json");
+const authTokensPath = path.join(config.dataDir, "auth-tokens.json");
 const loginFailures = new Map();
+const emailRequests = new Map();
 fs.mkdirSync(cacheDir, { recursive: true });
 
 function loadEnv(file) {
@@ -72,6 +78,8 @@ function readAccounts() { const value = readJson(accountsPath, []); return Array
 function saveAccounts(value) { atomicWrite(accountsPath, value.slice(-5000)); }
 function readSessions() { const value = readJson(sessionsPath, []); return Array.isArray(value) ? value : []; }
 function saveSessions(value) { atomicWrite(sessionsPath, value.filter((item) => Date.parse(item.expiresAt) > Date.now()).slice(-10000)); }
+function readAuthTokens() { const value = readJson(authTokensPath, []); return Array.isArray(value) ? value : []; }
+function saveAuthTokens(value) { atomicWrite(authTokensPath, value.filter((item) => !item.consumedAt && Date.parse(item.expiresAt) > Date.now()).slice(-10000)); }
 function validClientId(value) { return typeof value === "string" && /^[A-Za-z0-9-]{16,80}$/.test(value); }
 function validPaperId(value) { return /^\d{4}\.\d{4,5}$/.test(String(value || "")); }
 function normalizeEmail(value) { const email = String(value || "").trim().toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : ""; }
@@ -81,7 +89,7 @@ function passwordHash(password, salt) { return crypto.scryptSync(password, salt,
 function safeEqualHex(left, right) { try { const a = Buffer.from(left, "hex"); const b = Buffer.from(right, "hex"); return a.length === b.length && crypto.timingSafeEqual(a, b); } catch { return false; } }
 function cleanText(value, max) { const text = String(value || "").trim(); return text && text.length <= max ? text : ""; }
 function publicAccount(account) {
-  return { id: account.id, email: account.email, nickname: account.nickname, profile: account.profile || null, verification: account.verification || { status: "unverified", label: "平台未认证" }, createdAt: account.createdAt };
+  return { id: account.id, email: account.email, nickname: account.nickname, profile: account.profile || null, verification: account.verification || { status: "unverified", label: "平台未认证" }, emailVerification: account.emailVerifiedAt ? { status: "verified", label: "邮箱已验证", verifiedAt: account.emailVerifiedAt } : { status: "unverified", label: "邮箱未验证", verifiedAt: null }, createdAt: account.createdAt };
 }
 function normalizeProfile(input = {}, fallback = {}) {
   const gradeOptions = new Set(["大一", "大二", "大三", "大四", "研究生", "其他"]);
@@ -106,14 +114,16 @@ function authenticate(req, required = true) {
   if (!account) throw new HttpError(401, "登录状态已失效，请重新登录", "invalid_session");
   return account;
 }
-function register(input) {
+async function register(input) {
   const email = normalizeEmail(input.email); const password = input.password; const nickname = cleanText(input.nickname, 20);
   if (!email) throw new HttpError(400, "邮箱格式无效", "invalid_email");
   if (!validPassword(password)) throw new HttpError(400, "密码需为 8—72 个字符", "invalid_password");
   if (!nickname) throw new HttpError(400, "昵称需为 1—20 个字符", "invalid_nickname");
   const accounts = readAccounts(); if (accounts.some((item) => item.email === email)) throw new HttpError(409, "该邮箱已注册", "email_exists");
   const salt = crypto.randomBytes(16).toString("hex"); const account = { id: crypto.randomUUID(), email, nickname, passwordSalt: salt, passwordHash: passwordHash(password, salt), verification: { status: "unverified", label: "平台未认证" }, createdAt: new Date().toISOString() };
-  accounts.push(account); saveAccounts(accounts); return { account, token: createSession(account.id) };
+  accounts.push(account); saveAccounts(accounts);
+  let emailDelivery; try { emailDelivery = await issueEmailToken(account, "verify_email"); } catch { emailDelivery = { status: "failed" }; }
+  return { account, token: createSession(account.id), email: emailDelivery };
 }
 function login(input) {
   const email = normalizeEmail(input.email); const password = input.password;
@@ -143,7 +153,64 @@ function changePassword(accountId, input) {
 function deleteAccount(accountId, input) {
   const accounts = readAccounts(); const account = accounts.find((item) => item.id === accountId); if (!account) throw new HttpError(404, "账号不存在", "account_not_found");
   if (!verifyPassword(account, input.password)) throw new HttpError(401, "密码错误，账号未删除", "invalid_current_password");
-  saveAccounts(accounts.filter((item) => item.id !== accountId)); saveSessions(readSessions().filter((item) => item.accountId !== accountId)); saveOrders(readOrders().filter((item) => item.accountId !== accountId)); return true;
+  saveAccounts(accounts.filter((item) => item.id !== accountId)); saveSessions(readSessions().filter((item) => item.accountId !== accountId)); saveOrders(readOrders().filter((item) => item.accountId !== accountId)); saveAuthTokens(readAuthTokens().filter((item) => item.accountId !== accountId)); return true;
+}
+
+function requestAllowed(key, windowMs = 60000) {
+  const now = Date.now(); const recent = emailRequests.get(key) || [];
+  const active = recent.filter((value) => now - value < 3600000);
+  if (active.length >= 5 || active.some((value) => now - value < windowMs)) return false;
+  active.push(now); emailRequests.set(key, active); return true;
+}
+function createAuthToken(accountId, type, lifetimeMs) {
+  const token = crypto.randomBytes(32).toString("base64url"); const now = new Date();
+  const records = readAuthTokens().filter((item) => !(item.accountId === accountId && item.type === type));
+  records.push({ id: crypto.randomUUID(), accountId, type, tokenHash: hash(token), createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + lifetimeMs).toISOString() }); saveAuthTokens(records);
+  return token;
+}
+function escapeHtml(value) { return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]); }
+async function deliverEmail({ to, subject, action, token, minutes }) {
+  const link = `${config.appBaseUrl}/profile.html?${action}=${encodeURIComponent(token)}`;
+  if (config.emailMode === "disabled") return { status: "disabled" };
+  if (config.emailMode === "preview") return { status: "preview", ...(config.exposeEmailPreview ? { previewUrl: link } : {}) };
+  if (!process.env.RESEND_API_KEY) throw new HttpError(503, "邮件服务尚未配置", "email_not_configured");
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json", "idempotency-key": `${action}-${hash(token).slice(0, 24)}` }, body: JSON.stringify({ from: config.emailFrom, to: [to], subject, html: `<div style="font-family:system-ui;line-height:1.7;color:#172016"><h2>${escapeHtml(subject)}</h2><p>请在 ${minutes} 分钟内点击下面的链接：</p><p><a href="${escapeHtml(link)}">继续操作</a></p><p>若不是你本人操作，请忽略本邮件。</p></div>` }) });
+  if (!response.ok) throw new HttpError(502, "邮件暂时无法发送，请稍后重试", "email_delivery_failed");
+  return { status: "sent" };
+}
+async function issueEmailToken(account, type) {
+  const verify = type === "verify_email"; const token = createAuthToken(account.id, type, (verify ? 30 : 15) * 60000);
+  try { return await deliverEmail({ to: account.email, subject: verify ? "验证你的竞赛雷达邮箱" : "重置你的竞赛雷达密码", action: verify ? "verify" : "reset", token, minutes: verify ? 30 : 15 }); }
+  catch (error) { saveAuthTokens(readAuthTokens().filter((item) => item.tokenHash !== hash(token))); throw error; }
+}
+function consumeAuthToken(token, type) {
+  const tokenHash = hash(String(token || "")); const records = readAuthTokens();
+  const record = records.find((item) => item.type === type && item.tokenHash === tokenHash && !item.consumedAt && Date.parse(item.expiresAt) > Date.now());
+  if (!record) throw new HttpError(400, "链接无效或已过期，请重新申请", "invalid_auth_token");
+  saveAuthTokens(records.filter((item) => item.id !== record.id)); return record;
+}
+async function requestEmailVerification(account) {
+  if (account.emailVerifiedAt) return { status: "already_verified" };
+  if (!requestAllowed(`verify:${account.id}`)) throw new HttpError(429, "请求过于频繁，请稍后再试", "email_rate_limited");
+  return issueEmailToken(account, "verify_email");
+}
+function confirmEmail(token) {
+  const record = consumeAuthToken(token, "verify_email"); const accounts = readAccounts(); const index = accounts.findIndex((item) => item.id === record.accountId);
+  if (index < 0) throw new HttpError(400, "账号不存在", "account_not_found");
+  accounts[index].emailVerifiedAt = accounts[index].emailVerifiedAt || new Date().toISOString(); saveAccounts(accounts); return accounts[index];
+}
+async function forgotPassword(input) {
+  const email = normalizeEmail(input.email); const accepted = { accepted: true, deliveryReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY) };
+  if (!email || !requestAllowed(`reset:${email}`)) return accepted;
+  const account = readAccounts().find((item) => item.email === email); if (!account) return accepted;
+  try { const delivery = await issueEmailToken(account, "reset_password"); return { ...accepted, ...(config.exposeEmailPreview && delivery.previewUrl ? { previewUrl: delivery.previewUrl } : {}) }; }
+  catch { return accepted; }
+}
+function resetPassword(input) {
+  if (!validPassword(input.newPassword)) throw new HttpError(400, "新密码需为 8—72 个字符", "invalid_password");
+  const record = consumeAuthToken(input.token, "reset_password"); const accounts = readAccounts(); const index = accounts.findIndex((item) => item.id === record.accountId);
+  if (index < 0) throw new HttpError(400, "账号不存在", "account_not_found");
+  const salt = crypto.randomBytes(16).toString("hex"); accounts[index].passwordSalt = salt; accounts[index].passwordHash = passwordHash(input.newPassword, salt); accounts[index].passwordChangedAt = new Date().toISOString(); saveAccounts(accounts); saveSessions(readSessions().filter((item) => item.accountId !== record.accountId)); return true;
 }
 function ownerFor(req, clientId) {
   const account = authenticate(req, false); if (account) return { type: "account", id: account.id };
@@ -255,12 +322,16 @@ const server = http.createServer(async (req, res) => {
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
   if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", identityMode: "account_or_device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", emailMode: config.emailMode, emailReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY), identityMode: "account_or_device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
-    if (req.method === "POST" && url.pathname === "/api/auth/register") { const result = register(await body(req)); return json(res, 201, { account: publicAccount(result.account), token: result.token }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/auth/register") { const result = await register(await body(req)); return json(res, 201, { account: publicAccount(result.account), token: result.token, emailDelivery: result.email.status, ...(config.exposeEmailPreview && result.email.previewUrl ? { emailPreviewUrl: result.email.previewUrl } : {}) }, origin); }
     if (req.method === "POST" && url.pathname === "/api/auth/login") { const result = login(await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
     if (req.method === "POST" && url.pathname === "/api/auth/logout") { authenticate(req); logout(req); return json(res, 200, { ok: true }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/auth/email/confirm") { const account = confirmEmail((await body(req)).token); return json(res, 200, { account: publicAccount(account) }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/auth/password/forgot") return json(res, 202, await forgotPassword(await body(req)), origin);
+    if (req.method === "POST" && url.pathname === "/api/auth/password/reset") { resetPassword(await body(req)); return json(res, 200, { reset: true }, origin); }
     if (req.method === "GET" && url.pathname === "/api/auth/me") return json(res, 200, { account: publicAccount(authenticate(req)) }, origin);
+    if (req.method === "POST" && url.pathname === "/api/me/email/resend") { const account = authenticate(req); const delivery = await requestEmailVerification(account); return json(res, 202, { delivery: delivery.status, ...(config.exposeEmailPreview && delivery.previewUrl ? { previewUrl: delivery.previewUrl } : {}) }, origin); }
     if (req.method === "PUT" && url.pathname === "/api/me/profile") { const account = authenticate(req); return json(res, 200, { account: publicAccount(saveProfile(account.id, await body(req))) }, origin); }
     if (req.method === "PUT" && url.pathname === "/api/me/password") { const account = authenticate(req); const result = changePassword(account.id, await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
     if (req.method === "DELETE" && url.pathname === "/api/me") { const account = authenticate(req); deleteAccount(account.id, await body(req)); return json(res, 200, { deleted: true }, origin); }
@@ -278,4 +349,3 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(config.port, config.host, () => console.log(`Student Radar API listening on http://${config.host}:${config.port}`));
-

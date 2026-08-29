@@ -32,9 +32,13 @@
         <label class="field-label" for="account-password">密码</label><input id="account-password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="至少 8 个字符" required>
         <label class="field-label" for="account-nickname">昵称（注册时使用）</label><input id="account-nickname" name="nickname" maxlength="20" value="林小八">
         <div class="account-actions"><button id="account-login" class="estimate-button" type="button">登录</button><button id="account-register" class="secondary-button" type="submit">注册并登录</button></div>
+        <button id="forgot-password" class="account-text-button" type="button">忘记密码？</button>
       </form>
+      <form id="forgot-password-form" class="account-recovery" hidden><strong>找回密码</strong><p>输入注册邮箱。无论账号是否存在，系统都会返回相同提示。</p><input id="forgot-email" type="email" autocomplete="email" maxlength="254" placeholder="注册邮箱" required><div class="account-actions"><button class="estimate-button" type="submit">发送重置邮件</button><button id="cancel-forgot-password" class="secondary-button" type="button">返回登录</button></div></form>
+      <form id="reset-password-form" class="account-recovery" hidden><strong>设置新密码</strong><p>重置成功后，所有设备需要重新登录。</p><input id="reset-new-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="新密码，至少 8 个字符" required><div class="account-actions"><button class="estimate-button" type="submit">确认重置密码</button><a class="secondary-button" href="profile.html">取消</a></div></form>
       <div id="account-session" class="account-session" hidden><span id="account-avatar">八</span><div><strong id="account-name">林小八</strong><small id="account-email-label"></small></div><button id="account-logout" class="secondary-button" type="button">退出登录</button></div>
       <div id="account-security" class="account-security" hidden>
+        <details><summary>邮箱与登录安全</summary><div class="email-verification-row"><div><strong id="email-verification-label">邮箱未验证</strong><small>邮箱验证只证明邮箱归属，不代表院校身份认证。</small></div><button id="resend-verification" class="secondary-button" type="button">发送验证邮件</button></div></details>
         <details><summary>修改密码</summary><form id="password-form"><input id="current-password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="当前密码" required><input id="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="新密码，至少 8 个字符" required><button class="secondary-button" type="submit">更新密码并退出其他会话</button></form></details>
         <details class="danger-zone"><summary>删除账号与云端数据</summary><form id="delete-account-form"><p>会永久删除账号、同步档案和该账号的论文订单，无法恢复。本机游客数据不会被删除。</p><input id="delete-password" type="password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="输入密码确认" required><label><input id="delete-confirm" type="checkbox" required> 我确认永久删除账号数据</label><button type="submit">永久删除账号</button></form></details>
       </div>
@@ -99,4 +103,3 @@
   <script src="config.js"></script><script src="profile.js"></script>
 </body>
 </html>
-

@@ -26,12 +26,22 @@ npm start
 
 - `POST /api/auth/register`：邮箱、8—72 字符密码和昵称注册，返回一次会话令牌。
 - `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`：登录、退出和恢复会话。
+- `POST /api/auth/email/confirm`、`POST /api/me/email/resend`：一次性链接验证邮箱或重新发送验证邮件；邮箱验证与院校认证相互独立。
+- `POST /api/auth/password/forgot`：始终返回相同的受理结果，避免泄露邮箱是否注册。
+- `POST /api/auth/password/reset`：使用 15 分钟有效的一次性令牌重置密码，并撤销该账号的全部旧会话。
 - `PUT /api/me/profile`：登录后同步昵称、学校、专业、年级和英文沟通偏好。
 - `PUT /api/me/password`：校验当前密码后更新密码，并撤销该账号的其他全部会话。
 - `DELETE /api/me`：再次校验密码后永久删除账号、会话、同步档案和账号订单。
 - 登录请求通过 `Authorization: Bearer <token>` 访问账号订单；未登录时仍兼容随机设备 `clientId`。
 
 账号档案中的院校状态默认是“平台未认证”。当前不收集学号、学生证或学校密码，也没有开放人工认证；该账号系统只用于 Web 内测和跨设备恢复，不能直接视为微信小程序正式身份体系。
+
+## 邮件发送
+
+- `EMAIL_DELIVERY_MODE=disabled`：接受请求但不发送，适合尚未配置邮件服务的线上预备阶段。
+- `EMAIL_DELIVERY_MODE=preview`：只用于本地测试；配合 `EMAIL_EXPOSE_PREVIEW=true` 返回一次性预览链接，严禁在线上开启。
+- `EMAIL_DELIVERY_MODE=resend`：通过 Resend REST API 发送邮件，同时配置 `RESEND_API_KEY`、`EMAIL_FROM` 和 `APP_BASE_URL`。
+- Resend API Key 只需 `sending_access`，不得写入前端、代码仓库或日志。
 
 运行 `npm test` 会在隔离的临时目录中验证商品、订单、未支付拦截、模拟支付、权益、生成幂等和订单归属。测试使用 `AI_MOCK_MODE=true`，不会调用模型或产生费用。
 
@@ -46,4 +56,3 @@ npm start
 `Dockerfile` 可用于部署到支持容器的服务；生产容器默认关闭模拟支付。完整上线门槛见 `DEPLOYMENT.md`，安全边界见 `SECURITY.md`。
 
 Web 内测的逐项部署步骤见 `DEPLOY-RAILWAY.md`；微信小程序阶段的数据库与身份迁移见 `CLOUDBASE-MIGRATION.md`。服务会优先读取 `API_PORT`，未设置时读取云平台注入的 `PORT`。
-

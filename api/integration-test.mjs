@@ -7,7 +7,7 @@ import crypto from "node:crypto";
 const port = 8899;
 const base = `http://127.0.0.1:${port}`;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "student-radar-api-test-"));
-const child = spawn(process.execPath, ["server.mjs"], { cwd: new URL(".", import.meta.url), env: { ...process.env, API_PORT: "", PORT: String(port), DATA_DIR: dataDir, OPENAI_API_KEY: "", SKIP_LOCAL_ENV: "true", AI_MOCK_MODE: "true", ENABLE_MOCK_PAYMENT: "true" }, stdio: ["ignore", "pipe", "pipe"] });
+const child = spawn(process.execPath, ["server.mjs"], { cwd: new URL(".", import.meta.url), env: { ...process.env, API_PORT: "", PORT: String(port), DATA_DIR: dataDir, OPENAI_API_KEY: "", SKIP_LOCAL_ENV: "true", AI_MOCK_MODE: "true", ENABLE_MOCK_PAYMENT: "true", EMAIL_DELIVERY_MODE: "preview", EMAIL_EXPOSE_PREVIEW: "true", APP_BASE_URL: "http://127.0.0.1:8765" }, stdio: ["ignore", "pipe", "pipe"] });
 let stderr = ""; child.stderr.on("data", (chunk) => { stderr += chunk; });
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
@@ -18,13 +18,18 @@ async function waitForServer() {
 }
 
 try {
-  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock" && health.identityMode === "account_or_device" && health.volumeAttached === false && health.revision === "local", "Unexpected test modes");
+  const health = await waitForServer(); assert(health.aiMode === "mock" && health.aiReady === true && health.keyConfigured === false && health.paymentMode === "mock" && health.emailMode === "preview" && health.emailReady === false && health.identityMode === "account_or_device" && health.volumeAttached === false && health.revision === "local", "Unexpected test modes");
   const productResult = await request("/api/products"); assert(productResult.value.products.length === 4, "Expected four products");
   const weakRegistration = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "short", nickname: "测试同学" }) });
   assert(weakRegistration.response.status === 400, "Weak password guard failed");
   const registered = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026", nickname: "测试同学" }) });
-  assert(registered.response.status === 201 && registered.value.account.verification.status === "unverified" && registered.value.token, "Account registration failed");
+  assert(registered.response.status === 201 && registered.value.account.verification.status === "unverified" && registered.value.account.emailVerification.status === "unverified" && registered.value.token && registered.value.emailPreviewUrl, "Account registration failed");
   const token = registered.value.token; const authHeaders = { "content-type": "application/json", authorization: `Bearer ${token}` };
+  const verifyToken = new URL(registered.value.emailPreviewUrl).searchParams.get("verify");
+  const confirmedEmail = await request("/api/auth/email/confirm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: verifyToken }) });
+  assert(confirmedEmail.response.ok && confirmedEmail.value.account.emailVerification.status === "verified" && confirmedEmail.value.account.verification.status === "unverified", "Email verification failed or leaked into institution verification");
+  const reusedVerification = await request("/api/auth/email/confirm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: verifyToken }) }); assert(reusedVerification.response.status === 400, "Email verification token was reusable");
+  const alreadyVerified = await request("/api/me/email/resend", { method: "POST", headers: authHeaders, body: "{}" }); assert(alreadyVerified.response.status === 202 && alreadyVerified.value.delivery === "already_verified", "Verified email resend guard failed");
   const duplicate = await request("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026", nickname: "测试同学" }) });
   assert(duplicate.response.status === 409, "Duplicate account guard failed");
   const anonymousMe = await request("/api/auth/me"); assert(anonymousMe.response.status === 401, "Anonymous account guard failed");
@@ -75,23 +80,30 @@ try {
   assert(accountHistory.response.ok && accountHistory.value.identityMode === "account" && accountHistory.value.orders.length === 1, "Cross-device account history failed");
   const deviceCannotReadAccountOrder = await request(`/api/orders/${accountOrder.value.order.id}?clientId=${clientId}`);
   assert(deviceCannotReadAccountOrder.response.status === 404, "Account order leaked to device identity");
-  const wrongPasswordChange = await request("/api/me/password", { method: "PUT", headers: authHeaders, body: JSON.stringify({ currentPassword: "wrong-password", newPassword: "new-correct-horse-2026" }) });
+  const unknownReset = await request("/api/auth/password/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "nobody@example.com" }) }); assert(unknownReset.response.status === 202 && unknownReset.value.accepted && !unknownReset.value.previewUrl, "Password reset leaked account existence");
+  const forgot = await request("/api/auth/password/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com" }) });
+  const resetToken = new URL(forgot.value.previewUrl).searchParams.get("reset"); assert(forgot.response.status === 202 && resetToken, "Password reset request failed");
+  const invalidReset = await request("/api/auth/password/reset", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: "invalid-token", newPassword: "reset-correct-horse-2026" }) }); assert(invalidReset.response.status === 400, "Invalid reset token accepted");
+  const reset = await request("/api/auth/password/reset", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: resetToken, newPassword: "reset-correct-horse-2026" }) }); assert(reset.response.ok && reset.value.reset, "Password reset failed");
+  const reusedReset = await request("/api/auth/password/reset", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: resetToken, newPassword: "another-correct-horse-2026" }) }); assert(reusedReset.response.status === 400, "Password reset token was reusable");
+  const resetRevokedSession = await request("/api/auth/me", { headers: authHeaders }); assert(resetRevokedSession.response.status === 401, "Password reset did not revoke sessions");
+  const resetLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "reset-correct-horse-2026" }) }); assert(resetLogin.response.ok, "Reset password login failed");
+  const resetHeaders = { "content-type": "application/json", authorization: `Bearer ${resetLogin.value.token}` };
+  const wrongPasswordChange = await request("/api/me/password", { method: "PUT", headers: resetHeaders, body: JSON.stringify({ currentPassword: "wrong-password", newPassword: "new-correct-horse-2026" }) });
   assert(wrongPasswordChange.response.status === 401, "Password confirmation guard failed");
-  const changed = await request("/api/me/password", { method: "PUT", headers: authHeaders, body: JSON.stringify({ currentPassword: "correct-horse-2026", newPassword: "new-correct-horse-2026" }) });
+  const changed = await request("/api/me/password", { method: "PUT", headers: resetHeaders, body: JSON.stringify({ currentPassword: "reset-correct-horse-2026", newPassword: "new-correct-horse-2026" }) });
   assert(changed.response.ok && changed.value.token, "Password change failed");
-  const revokedMe = await request("/api/auth/me", { headers: authHeaders }); assert(revokedMe.response.status === 401, "Old session survived password change");
-  const oldLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "correct-horse-2026" }) }); assert(oldLogin.response.status === 401, "Old password survived password change");
+  const revokedMe = await request("/api/auth/me", { headers: resetHeaders }); assert(revokedMe.response.status === 401, "Old session survived password change");
+  const oldLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "reset-correct-horse-2026" }) }); assert(oldLogin.response.status === 401, "Old password survived password change");
   const newLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "new-correct-horse-2026" }) }); assert(newLogin.response.ok, "New password login failed");
   const deleteHeaders = { "content-type": "application/json", authorization: `Bearer ${newLogin.value.token}` };
   const wrongDelete = await request("/api/me", { method: "DELETE", headers: deleteHeaders, body: JSON.stringify({ password: "wrong-password" }) }); assert(wrongDelete.response.status === 401, "Account deletion password guard failed");
   const deleted = await request("/api/me", { method: "DELETE", headers: deleteHeaders, body: JSON.stringify({ password: "new-correct-horse-2026" }) }); assert(deleted.response.ok && deleted.value.deleted, "Account deletion failed");
   const deletedLogin = await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "student@example.com", password: "new-correct-horse-2026" }) }); assert(deletedLogin.response.status === 401, "Deleted account could still log in");
   const deletedOrders = JSON.parse(fs.readFileSync(path.join(dataDir, "orders.json"), "utf8")); assert(!deletedOrders.some((item) => item.accountId === registered.value.account.id), "Deleted account orders remained on disk");
-  console.log(JSON.stringify({ health: "ok", products: 4, accounts: "session-backed", profiles: "server-backed", passwordChange: "revokes-sessions", accountDeletion: "removes-account-and-orders", productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "account-and-device-isolated", ownership: "ok" }));
+  console.log(JSON.stringify({ health: "ok", products: 4, accounts: "session-backed", profiles: "server-backed", emailVerification: "one-time-and-separate-from-school", passwordReset: "non-enumerating-and-revokes-sessions", passwordChange: "revokes-sessions", accountDeletion: "removes-account-orders-and-auth-tokens", productContracts: "isolated", unpaidGuard: "ok", mockPayment: "ok", entitlement: "ok", generation: "ok", orderHistory: "account-and-device-isolated", ownership: "ok" }));
 } finally {
-  child.kill();
-  await new Promise((resolve) => child.once("exit", resolve));
+  if (child.exitCode === null) { child.kill(); await new Promise((resolve) => child.once("exit", resolve)); }
   fs.rmSync(dataDir, { recursive: true, force: true });
   if (stderr && !/status.*400|status.*402|status.*404/.test(stderr)) process.stderr.write(stderr);
 }
-
