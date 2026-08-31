@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check integration-test.mjs && node --check browser-e2e.cjs",
-    "test": "node integration-test.mjs",
+    "check": "node --check server.mjs && node --check integration-test.mjs && node --check order-gate-test.mjs && node --check browser-e2e.cjs",
+    "test": "node integration-test.mjs && node order-gate-test.mjs",
     "test:browser": "node browser-e2e.cjs"
   }
 }
-

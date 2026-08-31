@@ -185,6 +185,11 @@ main { max-width: 1120px; margin: auto; padding: 0 20px 70px; }
 .checkout-price span { margin-top: 5px; color: #949d90; font-size: 10px; }
 .analysis-checkout ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; color: #d8ddd4; font-size: 12px; }
 .analysis-checkout li::before { content: "✓"; margin-right: 8px; color: var(--lime); font-weight: 900; }
+.checkout-account { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: center; margin-top: 16px; padding: 12px; color: #d8ddd4; background: #20261d; border: 1px solid #394035; border-radius: 12px; }
+.checkout-account span { color: #8e978a; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.checkout-account strong { grid-column: 1; font-size: 12px; }
+.checkout-account a { grid-column: 2; grid-row: 1 / 3; color: var(--lime); font-size: 10px; font-weight: 800; text-decoration: none; }
+.checkout-account a[hidden] { display: none; }
 .analysis-checkout .checkout-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: checkout; }
 .analysis-checkout .checkout-steps li { display: grid; gap: 6px; color: #7f897b; font-size: 9px; line-height: 1.3; }
 .analysis-checkout .checkout-steps li::before { content: ""; width: 100%; height: 3px; margin: 0; background: #394035; border-radius: 999px; }

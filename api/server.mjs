@@ -22,7 +22,9 @@ const config = {
   appBaseUrl: String(process.env.APP_BASE_URL || "http://127.0.0.1:8765").replace(/\/$/, ""),
   emailMode: /^(?:resend|preview|disabled)$/.test(process.env.EMAIL_DELIVERY_MODE || "") ? process.env.EMAIL_DELIVERY_MODE : (apiHost === "0.0.0.0" ? "disabled" : "preview"),
   emailFrom: process.env.EMAIL_FROM || "林小八竞赛雷达 <onboarding@resend.dev>",
-  exposeEmailPreview: booleanEnv("EMAIL_EXPOSE_PREVIEW", false)
+  exposeEmailPreview: booleanEnv("EMAIL_EXPOSE_PREVIEW", false),
+  requireAccountForOrders: booleanEnv("REQUIRE_ACCOUNT_FOR_ORDERS", false),
+  requireVerifiedEmailForOrders: booleanEnv("REQUIRE_VERIFIED_EMAIL_FOR_ORDERS", false)
 };
 
 const products = Object.freeze([
@@ -217,6 +219,12 @@ function ownerFor(req, clientId) {
   if (!validClientId(clientId)) throw new HttpError(400, "客户端标识无效", "invalid_client");
   return { type: "device", id: clientId };
 }
+function orderCreationOwner(req, clientId) {
+  if (!config.requireAccountForOrders) return ownerFor(req, clientId);
+  const account = authenticate(req);
+  if (config.requireVerifiedEmailForOrders && !account.emailVerifiedAt) throw new HttpError(403, "请先完成邮箱验证再创建订单", "email_verification_required");
+  return { type: "account", id: account.id };
+}
 function ownedBy(order, owner) { return owner.type === "account" ? order.accountId === owner.id : !order.accountId && order.clientId === owner.id; }
 function publicOrder(order) {
   return { id: order.id, paperId: order.paperId, paperTitle: order.paperTitle, productId: order.productId, productName: order.productName, priceFen: order.priceFen, status: order.status, createdAt: order.createdAt, paidAt: order.paidAt || null, completedAt: order.completedAt || null, analysis: order.status === "completed" ? order.analysis : null, cached: Boolean(order.cached) };
@@ -322,7 +330,7 @@ const server = http.createServer(async (req, res) => {
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
   if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", emailMode: config.emailMode, emailReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY), identityMode: "account_or_device", storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", emailMode: config.emailMode, emailReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY), identityMode: config.requireAccountForOrders ? "account_required" : "account_or_device", orderAccountRequired: config.requireAccountForOrders, orderEmailVerifiedRequired: config.requireVerifiedEmailForOrders, storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
     if (req.method === "POST" && url.pathname === "/api/auth/register") { const result = await register(await body(req)); return json(res, 201, { account: publicAccount(result.account), token: result.token, emailDelivery: result.email.status, ...(config.exposeEmailPreview && result.email.previewUrl ? { emailPreviewUrl: result.email.previewUrl } : {}) }, origin); }
     if (req.method === "POST" && url.pathname === "/api/auth/login") { const result = login(await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
@@ -336,7 +344,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "PUT" && url.pathname === "/api/me/password") { const account = authenticate(req); const result = changePassword(account.id, await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
     if (req.method === "DELETE" && url.pathname === "/api/me") { const account = authenticate(req); deleteAccount(account.id, await body(req)); return json(res, 200, { deleted: true }, origin); }
     if (req.method === "GET" && url.pathname === "/api/orders") { const owner = ownerFor(req, url.searchParams.get("clientId")); return json(res, 200, { orders: listOrders(owner), identityMode: owner.type }, origin); }
-    if (req.method === "POST" && url.pathname === "/api/orders") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 201, { order: publicOrder(createOrder(input, owner)) }, origin); }
+    if (req.method === "POST" && url.pathname === "/api/orders") { const input = await body(req); const owner = orderCreationOwner(req, input.clientId); return json(res, 201, { order: publicOrder(createOrder(input, owner)) }, origin); }
     const match = url.pathname.match(/^\/api\/orders\/([0-9a-f-]+)(?:\/(mock-pay|generate))?$/i);
     if (match && req.method === "GET" && !match[2]) { const owner = ownerFor(req, url.searchParams.get("clientId")); return json(res, 200, { order: publicOrder(findOrder(match[1], owner).order) }, origin); }
     if (match && req.method === "POST" && match[2] === "mock-pay") { const input = await body(req); const owner = ownerFor(req, input.clientId); return json(res, 200, { order: publicOrder(payMock(match[1], owner)) }, origin); }

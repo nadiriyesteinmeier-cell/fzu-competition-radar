@@ -15,12 +15,14 @@
   const paper = papers.find((item) => item.id === requestedId) || papers[0];
   const apiBase = resolveApiBase();
   let apiAvailable = false;
+  let runtime = { paymentMode: "mock", orderAccountRequired: false, orderEmailVerifiedRequired: false };
   let currentProduct = products[0];
   let currentMarkdown = "";
   const elements = {
     category: $("#analysis-category"), title: $("#analysis-paper-title"), authors: $("#analysis-authors"), source: $("#analysis-source"),
-    productList: $("#analysis-product-list"), checkoutName: $("#checkout-name"), checkoutDescription: $("#checkout-description"),
+    productList: $("#analysis-product-list"), checkoutName: $("#checkout-name"), checkoutDescription: $("#checkout-description"), priceNote: $("#checkout-price-note"),
     checkoutPrice: $("#checkout-price"), checkoutFeatures: $("#checkout-features"), unlock: $("#mock-unlock"), checkoutStatus: $("#checkout-status"), runtime: $("#ai-runtime-status"),
+    accountStatus: $("#checkout-account-status"), accountLink: $("#checkout-account-link"),
     question: $("#sample-question"), method: $("#sample-method"), result: $("#sample-result"), resultSection: $("#analysis-result"), resultGrid: $("#analysis-result-grid"),
     resultHeading: $("#result-heading"), resultNotice: $("#result-notice"), copy: $("#copy-analysis"), copyStatus: $("#analysis-copy-status"),
     readingList: $("#reading-list"), readingCount: $("#reading-count"), readingEmpty: $("#reading-empty"),
@@ -79,8 +81,28 @@
     if (!/^[A-Za-z0-9-]{16,80}$/.test(value || "")) { value = crypto.randomUUID(); localStorage.setItem(clientKey, value); }
     return value;
   }
-  function authToken() { try { const value = JSON.parse(localStorage.getItem(authKey) || "null"); return typeof value?.token === "string" ? value.token : ""; } catch (_) { return ""; } }
+  function authRecord() { try { const value = JSON.parse(localStorage.getItem(authKey) || "null"); return typeof value?.token === "string" ? value : null; } catch (_) { return null; } }
+  function authToken() { return authRecord()?.token || ""; }
+  function saveAuthAccount(account) { const auth = authRecord(); if (!auth || !account) return; auth.account = account; localStorage.setItem(authKey, JSON.stringify(auth)); }
   function apiHeaders(json = false) { return { ...(json ? { "content-type": "application/json" } : {}), ...(authToken() ? { authorization: `Bearer ${authToken()}` } : {}) }; }
+  async function syncAccount() {
+    if (!authToken()) return null;
+    const response = await fetch(`${apiBase}/api/auth/me`, { headers: apiHeaders(), signal: AbortSignal.timeout(2500) });
+    if (response.status === 401) { localStorage.removeItem(authKey); return null; }
+    const value = await response.json(); if (!response.ok || !value.account) throw new Error(value.error || "账号状态同步失败");
+    saveAuthAccount(value.account); return value.account;
+  }
+  function eligibility(account = authRecord()?.account) {
+    if (runtime.orderAccountRequired && !authToken()) return { ok: false, label: "请先登录", action: "登录后解锁" };
+    if (runtime.orderEmailVerifiedRequired && account?.emailVerification?.status !== "verified") return { ok: false, label: "邮箱尚未验证", action: "验证邮箱后解锁" };
+    return { ok: true, label: account ? "已登录 · 邮箱已验证" : "设备内测模式", action: runtime.paymentMode === "mock" ? "内测解锁 · 不扣费" : "微信支付即将开放" };
+  }
+  function renderEligibility(account) {
+    const state = eligibility(account); elements.accountStatus.textContent = state.label; elements.accountLink.hidden = state.ok;
+    elements.unlock.textContent = state.action; elements.unlock.disabled = state.ok && runtime.paymentMode !== "mock";
+    elements.priceNote.textContent = runtime.paymentMode === "mock" ? "一次性解锁 · 内测不扣款" : "一次性解锁 · 等待微信支付开放";
+    return state;
+  }
   function saveOrder(status, analysis, backendOrder) {
     const orders = readOrders(); const item = { id: backendOrder?.id || `${status === "AI已生成" ? "AI" : "DEMO"}-${Date.now()}`, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id, productName: currentProduct.name, price: backendOrder ? String(backendOrder.priceFen / 100) : currentProduct.price, createdAt: backendOrder?.createdAt || new Date().toISOString(), status, analysis: analysis || null };
     writeOrders([item, ...orders.filter((order) => order.id !== item.id)]);
@@ -115,20 +137,32 @@
     const orders = readOrders(); elements.readingCount.textContent = `${orders.length} 条本机与账号记录`; elements.readingEmpty.hidden = orders.length > 0;
     elements.readingList.replaceChildren(...orders.map((order) => { const article = document.createElement("article"); const info = document.createElement("div"); const title = document.createElement("strong"); const meta = document.createElement("span"); const link = document.createElement("a"); title.textContent = order.paperTitle; meta.textContent = `${order.productName} · ¥${order.price} · ${order.status}`; link.href = `paper-analysis.html?id=${encodeURIComponent(order.paperId)}#analysis-result`; link.textContent = "重新打开 →"; info.append(title, meta); article.append(info, link); return article; }));
   }
+  function showSavedResult(scroll = false) {
+    if (location.hash !== "#analysis-result" || !paper) return false;
+    const saved = readOrders().find((item) => item.paperId === paper.id && item.analysis);
+    if (!saved) return false;
+    const savedProduct = products.find((item) => item.id === saved.productId); if (savedProduct) { currentProduct = savedProduct; renderProducts(); renderCheckout(); }
+    showApiResult(saved.analysis, scroll, true, saved.productId); return true;
+  }
   async function checkApi() {
-    if (!apiBase) { elements.checkoutStatus.textContent = "线上后端尚未部署；当前使用演示模式。"; return; }
+    if (!apiBase) { elements.checkoutStatus.textContent = "线上后端尚未部署；当前使用演示模式。"; elements.accountStatus.textContent = "离线演示"; elements.accountLink.hidden = true; elements.unlock.disabled = false; elements.unlock.textContent = "查看离线演示"; return; }
     try {
       const response = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(1800) }); const value = await response.json(); apiAvailable = response.ok && value.aiReady;
       if (!apiAvailable) throw new Error();
+      runtime = { paymentMode: value.paymentMode || "external", orderAccountRequired: Boolean(value.orderAccountRequired), orderEmailVerifiedRequired: Boolean(value.orderEmailVerifiedRequired) };
       const productResponse = await fetch(`${apiBase}/api/products`); const catalog = await productResponse.json();
       if (productResponse.ok) catalog.products.forEach((serverProduct) => { const local = products.find((item) => item.id === serverProduct.id); if (local) { local.price = String(serverProduct.priceFen / 100); local.name = serverProduct.name; } });
-      renderProducts(); renderCheckout(); const synced = await syncOrderHistory();
-      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.unlock.textContent = "创建订单并生成 · 模拟支付"; elements.checkoutStatus.textContent = `${value.aiMode === "mock" ? "无费用模拟AI" : `模型 ${value.model}`} · ${value.paymentMode === "mock" ? "模拟支付" : "等待支付回调"} · 已同步 ${synced} 个${authToken() ? "账号" : "设备"}订单`;
-    } catch (_) { elements.checkoutStatus.textContent = "本地AI服务未启动；当前使用演示模式。"; }
+      renderProducts(); renderCheckout(); const account = await syncAccount(); const synced = await syncOrderHistory(); renderEligibility(account); showSavedResult(false);
+      elements.runtime.textContent = apiBase.includes("127.0.0.1") || apiBase.includes("localhost") ? "本地AI已连接" : "云端AI已连接"; elements.runtime.classList.add("is-live"); elements.checkoutStatus.textContent = `${value.aiMode === "mock" ? "无费用模拟AI" : `模型 ${value.model}`} · ${value.paymentMode === "mock" ? "模拟支付" : "等待支付回调"} · 已同步 ${synced} 个${authToken() ? "账号" : "设备"}订单`;
+    } catch (_) { apiAvailable = false; elements.checkoutStatus.textContent = "云端服务暂时不可用；当前使用离线演示。"; elements.accountStatus.textContent = "离线演示"; elements.accountLink.hidden = true; elements.unlock.disabled = false; elements.unlock.textContent = "查看离线演示"; }
   }
   async function unlock() {
     if (!paper || elements.unlock.disabled) return;
     if (!apiAvailable) { saveOrder("演示解锁", null); showDemo(true); renderReading(); return; }
+    let account = authRecord()?.account;
+    try { if (authToken()) account = await syncAccount(); } catch (error) { elements.checkoutStatus.textContent = error.message; return; }
+    const access = renderEligibility(account); if (!access.ok) { location.href = "profile.html"; return; }
+    if (runtime.paymentMode !== "mock") { elements.checkoutStatus.textContent = "微信支付尚未开放；现在不会创建或扣款。"; return; }
     const original = elements.unlock.textContent; const deviceId = clientId(); elements.unlock.disabled = true; elements.unlock.textContent = "创建订单……"; elements.checkoutStatus.textContent = "正在创建一次性精读订单"; setCheckoutStep(0);
     try {
       const createdResponse = await fetch(`${apiBase}/api/orders`, { method: "POST", headers: apiHeaders(true), body: JSON.stringify({ clientId: deviceId, paperId: paper.id, paperTitle: paper.title, productId: currentProduct.id }) });
@@ -141,13 +175,12 @@
       const generated = await generatedResponse.json(); if (!generatedResponse.ok) throw new Error(generated.error || "AI服务请求失败");
       saveOrder("AI已生成", generated.order.analysis, generated.order); showApiResult(generated.order.analysis, true, generated.order.cached, generated.order.productId); renderReading(); elements.checkoutStatus.textContent = generated.order.cached ? "订单完成 · 已复用缓存" : "订单完成 · AI精读生成成功"; setCheckoutStep(3);
     } catch (error) { elements.checkoutStatus.textContent = `${error.message}；你仍可关闭后端后使用演示模式。`; setCheckoutStep(Math.max(0, elements.checkoutSteps.findIndex((step) => step.classList.contains("is-active"))), true); }
-    finally { elements.unlock.disabled = false; elements.unlock.textContent = original; }
+    finally { elements.unlock.disabled = false; elements.unlock.textContent = original; renderEligibility(authRecord()?.account); }
   }
 
   elements.unlock.addEventListener("click", unlock);
   elements.copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(currentMarkdown); elements.copyStatus.textContent = "Markdown 阅读卡已复制"; } catch (_) { elements.copyStatus.textContent = "复制失败，请手动选择内容"; } });
   renderPaper(); renderProducts(); renderCheckout(); renderReading(); setCheckoutStep(-1); checkApi();
-  if (location.hash === "#analysis-result" && paper) { const saved = readOrders().find((item) => item.paperId === paper.id && item.analysis); if (saved) { const savedProduct = products.find((item) => item.id === saved.productId); if (savedProduct) { currentProduct = savedProduct; renderProducts(); renderCheckout(); } showApiResult(saved.analysis, false, true, saved.productId); } else showDemo(false); }
+  if (location.hash === "#analysis-result" && paper && !showSavedResult(false)) showDemo(false);
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("./sw.js");
 })();
-

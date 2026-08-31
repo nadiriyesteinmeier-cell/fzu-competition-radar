@@ -43,7 +43,9 @@ npm start
 - `EMAIL_DELIVERY_MODE=resend`：通过 Resend REST API 发送邮件，同时配置 `RESEND_API_KEY`、`EMAIL_FROM` 和 `APP_BASE_URL`。
 - Resend API Key 只需 `sending_access`，不得写入前端、代码仓库或日志。
 
-运行 `npm test` 会在隔离的临时目录中验证商品、订单、未支付拦截、模拟支付、权益、生成幂等和订单归属。测试使用 `AI_MOCK_MODE=true`，不会调用模型或产生费用。
+运行 `npm test` 会在隔离的临时目录中验证商品、订单、未支付拦截、模拟支付、权益、生成幂等、订单归属，以及“登录并验证邮箱后才能创建订单”的生产门槛。测试使用 `AI_MOCK_MODE=true`，不会调用模型或产生费用。
+
+线上内测建议设置 `REQUIRE_ACCOUNT_FOR_ORDERS=true` 和 `REQUIRE_VERIFIED_EMAIL_FOR_ORDERS=true`。这样匿名用户与未验证邮箱账号都无法创建订单；本地开发不设置时仍可测试设备订单。
 
 当前只分析 arXiv 元数据中的作者摘要，不下载论文 PDF，不声称核验了全文。部署前仍需增加用户登录、数据库、支付回调、持久化限流和 HTTPS 域名。
 
