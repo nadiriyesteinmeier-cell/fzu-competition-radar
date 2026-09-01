@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/sitemap.xml
+Sitemap: https://www.linxiaoba.com/sitemap.xml

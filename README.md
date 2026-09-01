@@ -22,13 +22,13 @@ Web 内测账号现支持邮箱注册登录、30 天服务端会话、院校档�
 
 部署采用两阶段路线：Railway 持久化 Volume 用于 10—30 人 Web 内测，先开启无费用模拟 AI 和模拟支付；确认需求后再迁移腾讯 CloudBase 数据库与微信身份。托管选择依据见仓库根目录 `HOSTING-DECISION-2026-08-24.md`，逐项操作见 `api/DEPLOY-RAILWAY.md`。
 
-在线体验：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/
+在线体验：https://www.linxiaoba.com/
 
-论文雷达：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/papers.html
+论文雷达：https://www.linxiaoba.com/papers.html
 
-四六级区间估分：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/cet.html
+四六级区间估分：https://www.linxiaoba.com/cet.html
 
-2 分钟匿名反馈：https://nadiriyesteinmeier-cell.github.io/fzu-competition-radar/feedback.html
+2 分钟匿名反馈：https://www.linxiaoba.com/feedback.html
 
 ## 本地预览
 
