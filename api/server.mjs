@@ -8,11 +8,22 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const workspace = path.resolve(here, "..");
 if (!booleanEnv("SKIP_LOCAL_ENV", false)) loadEnv(path.join(workspace, ".env.local"));
 const apiHost = /^(?:127\.0\.0\.1|0\.0\.0\.0|localhost)$/.test(process.env.API_HOST || "") ? process.env.API_HOST : "127.0.0.1";
+const requestedAiProvider = String(process.env.AI_PROVIDER || "").trim().toLowerCase();
+const detectedAiProvider = process.env.DEEPSEEK_API_KEY ? "deepseek" : "openai";
+const aiProvider = ["deepseek", "openai"].includes(requestedAiProvider) ? requestedAiProvider : detectedAiProvider;
+const aiProviders = Object.freeze({
+  deepseek: { keyEnv: "DEEPSEEK_API_KEY", responsesUrl: "https://api.deepseek.com/responses", defaultModel: "deepseek-v4-flash" },
+  openai: { keyEnv: "OPENAI_API_KEY", responsesUrl: "https://api.openai.com/v1/responses", defaultModel: "gpt-5-mini" }
+});
+const aiProviderConfig = aiProviders[aiProvider];
 
 const config = {
   port: process.env.API_PORT ? integerEnv("API_PORT", 8787, 1, 65535) : integerEnv("PORT", 8787, 1, 65535),
   host: apiHost,
-  model: process.env.OPENAI_MODEL || "gpt-5-mini",
+  aiProvider,
+  aiKeyEnv: aiProviderConfig.keyEnv,
+  aiResponsesUrl: aiProviderConfig.responsesUrl,
+  model: process.env.AI_MODEL || (aiProvider === "openai" ? process.env.OPENAI_MODEL : "") || aiProviderConfig.defaultModel,
   dailyLimit: integerEnv("DAILY_REQUEST_LIMIT", 20, 1, 500),
   maxInputChars: integerEnv("MAX_INPUT_CHARS", 12000, 1000, 50000),
   mockAi: booleanEnv("AI_MOCK_MODE", false),
@@ -298,20 +309,26 @@ function mockAnalysis(input) {
   if (input.service === "deep") return { summary, research_question: "摘要披露的研究问题。", method: "摘要披露的方法路线。", key_results: ["摘要披露的结果线索"], innovations: ["需要相关工作对比的创新候选"], limitations: ["摘要无法提供完整实验细节"], reproduction_steps: ["阅读全文并确认数据、代码和指标"], reading_value: "适合进入全文精读。", evidence_notice };
   return { summary, translation: "测试模式未执行真实翻译；此字段用于验证中文阅读版交付。", glossary: ["benchmark：基准测试"], hard_sentences: ["需结合英文原句确认语义。"], evidence_notice };
 }
+function outputText(payload) {
+  if (typeof payload?.output_text === "string" && payload.output_text.trim()) return payload.output_text;
+  const parts = Array.isArray(payload?.output) ? payload.output.flatMap((item) => Array.isArray(item?.content) ? item.content : []) : [];
+  return parts.filter((item) => item?.type === "output_text" && typeof item.text === "string").map((item) => item.text).join("").trim();
+}
 async function analyze(input) {
-  const key = crypto.createHash("sha256").update(JSON.stringify(["contract-v2", input.paperId, input.service, input.abstract])).digest("hex");
+  const key = crypto.createHash("sha256").update(JSON.stringify(["contract-v3", config.mockAi ? "mock" : config.aiProvider, config.model, input.paperId, input.service, input.abstract])).digest("hex");
   const file = path.join(cacheDir, `${key}.json`);
   if (fs.existsSync(file)) return { ...readJson(file, {}), cached: true };
-  if (config.mockAi) { const stored = { paperId: input.paperId, service: input.service, model: "mock", generatedAt: new Date().toISOString(), analysis: mockAnalysis(input) }; atomicWrite(file, stored); return { ...stored, cached: false }; }
-  if (!process.env.OPENAI_API_KEY) throw new HttpError(503, "服务端尚未配置AI密钥", "key_missing");
+  if (config.mockAi) { const stored = { paperId: input.paperId, service: input.service, provider: "mock", model: "mock", generatedAt: new Date().toISOString(), analysis: mockAnalysis(input) }; atomicWrite(file, stored); return { ...stored, cached: false }; }
+  const apiKey = process.env[config.aiKeyEnv];
+  if (!apiKey) throw new HttpError(503, `服务端尚未配置${config.aiProvider === "deepseek" ? "DeepSeek" : "OpenAI"}密钥`, "key_missing");
   checkBudget(); const product = productMap.get(input.service); const contract = productContracts[input.service];
   let response;
-  try { response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify({ model: config.model, input: prompt(input), max_output_tokens: product.maxOutputTokens, store: false, text: { format: { type: "json_schema", name: `paper_${input.service}`, strict: true, schema: contract.schema } } }) }); }
+  try { response = await fetch(config.aiResponsesUrl, { method: "POST", headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" }, body: JSON.stringify({ model: config.model, input: prompt(input), max_output_tokens: product.maxOutputTokens, store: false, text: { format: { type: "json_schema", name: `paper_${input.service}`, strict: true, schema: contract.schema } } }) }); }
   catch { throw new HttpError(503, "服务器暂时无法连接AI服务", "upstream_unreachable"); }
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) { const code = payload?.error?.code; const message = code === "billing_not_active" ? "AI账户尚未开通API计费" : response.status === 429 ? "AI账户额度不足或请求过于频繁" : "AI服务暂时不可用"; throw new HttpError(response.status === 429 ? 429 : 502, message, code || "upstream_error"); }
-  let result; try { result = JSON.parse(payload.output_text); } catch { throw new HttpError(502, "AI返回结果无法解析", "invalid_ai_output"); }
-  const stored = { paperId: input.paperId, service: input.service, model: config.model, generatedAt: new Date().toISOString(), analysis: result }; atomicWrite(file, stored); recordUsage(payload.usage); return { ...stored, cached: false };
+  if (!response.ok) { const code = payload?.error?.code; const balanceError = response.status === 402 || ["billing_not_active", "insufficient_quota", "insufficient_balance"].includes(code); const message = balanceError ? "AI账户余额不足或尚未开通计费" : response.status === 429 ? "AI请求过于频繁，请稍后再试" : "AI服务暂时不可用"; throw new HttpError(response.status === 429 ? 429 : 502, message, code || "upstream_error"); }
+  let result; try { result = JSON.parse(outputText(payload)); } catch { throw new HttpError(502, "AI返回结果无法解析", "invalid_ai_output"); }
+  const stored = { paperId: input.paperId, service: input.service, provider: config.aiProvider, model: config.model, generatedAt: new Date().toISOString(), analysis: result }; atomicWrite(file, stored); recordUsage(payload.usage); return { ...stored, cached: false };
 }
 async function generateOrder(id, owner, input) {
   let found = findOrder(id, owner); let order = found.order;
@@ -330,7 +347,7 @@ const server = http.createServer(async (req, res) => {
   if (origin && !config.origins.has(origin)) return json(res, 403, { error: "来源未获允许", code: "origin_denied" });
   if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": origin, "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization", vary: "Origin" }); return res.end(); }
   try {
-    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env.OPENAI_API_KEY), aiReady: config.mockAi || Boolean(process.env.OPENAI_API_KEY), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : "openai", emailMode: config.emailMode, emailReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY), identityMode: config.requireAccountForOrders ? "account_required" : "account_or_device", orderAccountRequired: config.requireAccountForOrders, orderEmailVerifiedRequired: config.requireVerifiedEmailForOrders, storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
+    if (req.method === "GET" && url.pathname === "/health") return json(res, 200, { ok: true, model: config.model, dailyLimit: config.dailyLimit, keyConfigured: Boolean(process.env[config.aiKeyEnv]), aiReady: config.mockAi || Boolean(process.env[config.aiKeyEnv]), paymentMode: config.mockPayment ? "mock" : "external", aiMode: config.mockAi ? "mock" : config.aiProvider, aiProvider: config.mockAi ? "mock" : config.aiProvider, emailMode: config.emailMode, emailReady: config.emailMode === "resend" && Boolean(process.env.RESEND_API_KEY), identityMode: config.requireAccountForOrders ? "account_required" : "account_or_device", orderAccountRequired: config.requireAccountForOrders, orderEmailVerifiedRequired: config.requireVerifiedEmailForOrders, storageMode: "file", volumeAttached: Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH), revision: String(process.env.RAILWAY_GIT_COMMIT_SHA || "local").slice(0, 12) }, origin);
     if (req.method === "GET" && url.pathname === "/api/products") return json(res, 200, { products: products.map(({ maxOutputTokens, ...item }) => item), currency: "CNY" }, origin);
     if (req.method === "POST" && url.pathname === "/api/auth/register") { const result = await register(await body(req)); return json(res, 201, { account: publicAccount(result.account), token: result.token, emailDelivery: result.email.status, ...(config.exposeEmailPreview && result.email.previewUrl ? { emailPreviewUrl: result.email.previewUrl } : {}) }, origin); }
     if (req.method === "POST" && url.pathname === "/api/auth/login") { const result = login(await body(req)); return json(res, 200, { account: publicAccount(result.account), token: result.token }, origin); }
