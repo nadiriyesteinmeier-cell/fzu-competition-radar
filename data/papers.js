@@ -1,4 +1,4 @@
-window.PAPER_DATA_UPDATED_AT = "2026-10-03";
+window.PAPER_DATA_UPDATED_AT = "2026-10-04";
 window.PAPER_ITEMS = [
   {
     "id": "2610.02210",
@@ -646,7 +646,7 @@ window.PAPER_ITEMS = [
     "id": "2609.39624",
     "title": "ExpandDiff: Dynamic Range Expanding Diffusion for Single-Image HDR Reconstruction",
     "authors": [
-      "Mehmet Emre andıran",
+      "Mehmet Emre Andıran",
       "Zhuoqian Yang",
       "Liying Lu",
       "Mathieu Salzmann",
