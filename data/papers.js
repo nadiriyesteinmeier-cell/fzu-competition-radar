@@ -1,4 +1,4 @@
-window.PAPER_DATA_UPDATED_AT = "2026-10-16";
+window.PAPER_DATA_UPDATED_AT = "2026-10-18";
 window.PAPER_ITEMS = [
   {
     "id": "2610.22372",
